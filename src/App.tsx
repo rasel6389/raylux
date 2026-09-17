@@ -10,6 +10,7 @@ import { Footer } from './components/common/Footer';
 import { CartDrawer } from './components/common/CartDrawer';
 import { AuthModal } from './components/common/AuthModal';
 import { AIAgentWidget } from './components/common/AIAgentWidget';
+import { CurrencyModal } from './components/common/CurrencyModal';
 import { HomePage } from './pages/HomePage';
 import { ShopPage } from './pages/ShopPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
@@ -26,6 +27,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen bg-white text-black font-sans relative">
         <CheckoutPage />
         <AuthModal />
+        <CurrencyModal />
         <AIAgentWidget />
       </div>
     );
@@ -53,6 +55,7 @@ const AppContent: React.FC = () => {
       <CartDrawer />
       <Footer />
       <AuthModal />
+      <CurrencyModal />
       <AIAgentWidget />
     </div>
   );

@@ -24,6 +24,7 @@ import {
   LogOut,
   LifeBuoy,
   User as UserIcon,
+  Globe,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -32,7 +33,7 @@ export const DashboardPage: React.FC = () => {
   const { wishlist: wishlistIds, toggleWishlist, products } = useStore();
   const { addToCart } = useCart();
   const { tickets } = useTickets();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, currency, setCurrency, openCurrencyModal } = useCurrency();
 
   const userOpenTicketsCount = useMemo(() => {
     if (!currentUser) return 0;
@@ -747,6 +748,62 @@ export const DashboardPage: React.FC = () => {
                         SMS delivery tracking updates from courier
                       </span>
                     </label>
+                  </div>
+
+                  {/* Regional Currency & Market Preferences */}
+                  <div className="space-y-4 pt-6 border-t border-neutral-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase text-black">Regional Currency & Storefront Market</h4>
+                        <p className="text-neutral-500 text-xs">Select your currency for live conversions and localized checkout.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={openCurrencyModal}
+                        className="text-xs font-bold text-black underline uppercase hover:opacity-70 flex items-center gap-1"
+                      >
+                        <Globe size={13} />
+                        <span>Open Modal</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { code: 'USD', label: 'US Dollar', symbol: '$', flag: '🇺🇸' },
+                        { code: 'GBP', label: 'British Pound', symbol: '£', flag: '🇬🇧' },
+                        { code: 'EUR', label: 'Eurozone Euro', symbol: '€', flag: '🇪🇺' },
+                      ].map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => setCurrency(c.code as any)}
+                          className={`p-3.5 border text-xs font-bold rounded-2xl transition-all text-left flex flex-col justify-between gap-1.5 ${
+                            currency === c.code
+                              ? 'border-black bg-black text-white shadow-md'
+                              : 'border-neutral-200 hover:border-black text-neutral-800 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xl select-none">{c.flag}</span>
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                              currency === c.code ? 'bg-neutral-800 text-white' : 'bg-neutral-100 text-neutral-700'
+                            }`}>
+                              {c.symbol}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-nike text-sm font-black uppercase tracking-tight block">
+                              {c.code}
+                            </span>
+                            <span className={`text-[11px] font-medium truncate block ${
+                              currency === c.code ? 'text-neutral-300' : 'text-neutral-500'
+                            }`}>
+                              {c.label}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Save Button */}

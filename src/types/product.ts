@@ -92,7 +92,7 @@ export interface Order {
   date: string;
   status: 'DELIVERED' | 'IN TRANSIT' | 'PROCESSING' | 'PENDING';
   total: number;
-  currency?: 'USD' | 'GBP';
+  currency?: 'USD' | 'GBP' | 'EUR';
   currencyRate?: number;
   trackingNumber: string;
   carrier: string;

@@ -14,6 +14,7 @@ interface StoreContextType {
   updateOrderStatus: (orderId: string, newStatus: Order['status']) => void;
   updateOrderTracking: (orderId: string, carrier: string, trackingNumber: string) => void;
   addProduct: (itemData: Omit<InventoryItem, 'id'> & { images?: string[]; description?: string; profile?: string }) => void;
+  updateProduct: (inventoryId: string, updatedData: Partial<InventoryItem> & { images?: string[]; description?: string; profile?: string }) => void;
   restockProduct: (inventoryId: string, amount?: number) => void;
   deleteProduct: (inventoryId: string) => void;
   toggleWishlist: (productId: string) => void;
@@ -236,6 +237,53 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setProducts((prev) => [newProduct, ...prev]);
   };
 
+  const updateProduct = (
+    inventoryId: string,
+    updatedData: Partial<InventoryItem> & { images?: string[]; description?: string; profile?: string }
+  ) => {
+    let matchedSku = '';
+    setInventory((prev) =>
+      prev.map((item) => {
+        if (item.id === inventoryId) {
+          matchedSku = item.sku;
+          const nextStock = updatedData.stock !== undefined ? updatedData.stock : item.stock;
+          const nextReorder = updatedData.reorderPoint !== undefined ? updatedData.reorderPoint : item.reorderPoint;
+          return {
+            ...item,
+            ...updatedData,
+            name: updatedData.name ? updatedData.name.toUpperCase().trim() : item.name,
+            sku: updatedData.sku ? updatedData.sku.toUpperCase().trim() : item.sku,
+            stock: nextStock,
+            reorderPoint: nextReorder,
+            status: nextStock <= nextReorder ? 'LOW STOCK' : 'IN STOCK',
+          };
+        }
+        return item;
+      })
+    );
+
+    // Synchronize matching storefront product
+    setProducts((prev) =>
+      prev.map((prod) => {
+        if (prod.sku === matchedSku || (updatedData.sku && prod.sku === updatedData.sku)) {
+          return {
+            ...prod,
+            name: updatedData.name ? updatedData.name.toUpperCase().trim() : prod.name,
+            sku: updatedData.sku ? updatedData.sku.toUpperCase().trim() : prod.sku,
+            price: updatedData.price !== undefined ? updatedData.price : prod.price,
+            category: (updatedData.category as any) || prod.category,
+            material: (updatedData.material as any) || prod.material,
+            profile: (updatedData.profile as any) || prod.profile,
+            description: updatedData.description || prod.description,
+            stockCount: updatedData.stock !== undefined ? updatedData.stock : prod.stockCount,
+            images: updatedData.images && updatedData.images.length > 0 ? updatedData.images : prod.images,
+          };
+        }
+        return prod;
+      })
+    );
+  };
+
   const restockProduct = (inventoryId: string, amount: number = 25) => {
     let affectedSku = '';
     setInventory((prev) =>
@@ -295,6 +343,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateOrderStatus,
         updateOrderTracking,
         addProduct,
+        updateProduct,
         restockProduct,
         deleteProduct,
         toggleWishlist,

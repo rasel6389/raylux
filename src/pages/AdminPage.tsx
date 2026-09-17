@@ -38,11 +38,13 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Edit3,
 } from 'lucide-react';
 import { useTickets } from '../context/TicketContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { getAIAgentConfig, saveAIAgentConfig, askGeminiAgent } from '../services/aiAgent';
 import { AIAgentConfig, SupportTicket } from '../types/ticket';
+import { InventoryItem } from '../types/product';
 
 interface PromoCodeItem {
   code: string;
@@ -61,7 +63,17 @@ const DEFAULT_PROMO_CODES: PromoCodeItem[] = [
 
 export const AdminPage: React.FC = () => {
   const { isAdminLoggedIn, loginAdmin, logoutAdmin, goToHome, adminTab, setAdminTab } = useNavigation();
-  const { orders, inventory, updateOrderStatus, updateOrderTracking, addProduct, restockProduct, deleteProduct } = useStore();
+  const {
+    orders,
+    inventory,
+    products,
+    updateOrderStatus,
+    updateOrderTracking,
+    addProduct,
+    updateProduct,
+    restockProduct,
+    deleteProduct,
+  } = useStore();
   const { registeredUsers } = useAuth();
 
   // Login form state
@@ -85,8 +97,25 @@ export const AdminPage: React.FC = () => {
 
   // Modals & Drawers
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<(InventoryItem & { description?: string; profile?: string; images?: string[] }) | null>(null);
   const [selectedInspectOrder, setSelectedInspectOrder] = useState<Order | null>(null);
   const [inspectCustomer, setInspectCustomer] = useState<(typeof registeredUsers)[0] | null>(null);
+
+  const handleOpenAddProduct = () => {
+    setEditingProduct(null);
+    setIsProductModalOpen(true);
+  };
+
+  const handleEditProduct = (item: InventoryItem) => {
+    const matchingProd = products.find((p) => p.sku === item.sku || p.name.toLowerCase() === item.name.toLowerCase());
+    setEditingProduct({
+      ...item,
+      description: matchingProd?.description,
+      profile: matchingProd?.profile,
+      images: matchingProd?.images,
+    });
+    setIsProductModalOpen(true);
+  };
 
   // Copy feedback state
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
@@ -104,7 +133,7 @@ export const AdminPage: React.FC = () => {
 
   // Contexts for Tickets & Currency
   const { tickets, updateTicketStatus, addReply } = useTickets();
-  const { currency, exchangeRate, setExchangeRate } = useCurrency();
+  const { currency, exchangeRates, setExchangeRates, formatPrice } = useCurrency();
 
   // Support Desk state
   const [supportFilter, setSupportFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
@@ -119,12 +148,14 @@ export const AdminPage: React.FC = () => {
     { role: 'assistant', text: 'Raylux Intelligence Engine online. Connected to model: Gemini 3.8 Flash Preview. Ready to evaluate client requests.' },
   ]);
 
-  // Exchange rate controller state
-  const [editGbpRate, setEditGbpRate] = useState(exchangeRate.toString());
+  // Exchange rate controller state (GBP and EUR)
+  const [editGbpRate, setEditGbpRate] = useState(exchangeRates.GBP.toString());
+  const [editEurRate, setEditEurRate] = useState(exchangeRates.EUR.toString());
 
   useEffect(() => {
-    setEditGbpRate(exchangeRate.toString());
-  }, [exchangeRate]);
+    setEditGbpRate(exchangeRates.GBP.toString());
+    setEditEurRate(exchangeRates.EUR.toString());
+  }, [exchangeRates]);
 
   // Notification Banner
   const [notification, setNotification] = useState<string | null>(null);
@@ -285,12 +316,13 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveExchangeRate = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseFloat(editGbpRate);
-    if (!isNaN(parsed) && parsed > 0) {
-      setExchangeRate(parsed);
-      showNotice(`Exchange rate set: 1 USD = ${parsed} GBP!`);
+    const parsedGbp = parseFloat(editGbpRate);
+    const parsedEur = parseFloat(editEurRate);
+    if (!isNaN(parsedGbp) && parsedGbp > 0 && !isNaN(parsedEur) && parsedEur > 0) {
+      setExchangeRates({ GBP: parsedGbp, EUR: parsedEur });
+      showNotice(`Exchange rates set: 1 USD = £${parsedGbp} GBP • €${parsedEur} EUR!`);
     } else {
-      alert('Please enter a valid exchange rate greater than 0.');
+      alert('Please enter valid positive numbers for both GBP and EUR exchange rates.');
     }
   };
 
@@ -867,10 +899,10 @@ export const AdminPage: React.FC = () => {
             <button
               onClick={() => setActiveTab('settings')}
               className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-full text-[11px] font-bold text-neutral-700 transition-colors"
-              title="Click to configure live exchange rate"
+              title="Click to configure live exchange rates"
             >
               <Coins size={12} className="text-black" />
-              <span>1 USD = £{exchangeRate.toFixed(2)} GBP</span>
+              <span>£{exchangeRates.GBP.toFixed(2)} GBP • €{exchangeRates.EUR.toFixed(2)} EUR</span>
             </button>
 
             {/* Prominent Live Storefront Button */}
@@ -885,7 +917,7 @@ export const AdminPage: React.FC = () => {
 
             {/* Add Product Spec Button */}
             <button
-              onClick={() => setIsProductModalOpen(true)}
+              onClick={handleOpenAddProduct}
               className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap"
             >
               <Plus size={13} />
@@ -930,7 +962,7 @@ export const AdminPage: React.FC = () => {
               {/* Executive Quick Actions Bar */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button
-                  onClick={() => setIsProductModalOpen(true)}
+                  onClick={handleOpenAddProduct}
                   className="p-3.5 bg-black text-white hover:bg-neutral-800 rounded-2xl text-left transition-all shadow-xs flex items-center justify-between group"
                 >
                   <div>
@@ -1405,70 +1437,251 @@ export const AdminPage: React.FC = () => {
           {activeTab === 'inventory' && (
             <div className="space-y-6 animate-fadeIn">
               
-              {/* Header Title (Clean, NO duplicate buttons) */}
-              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-4 border-b border-neutral-200">
+              {/* Header Title with Action Button */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-200">
                 <div>
                   <span className="text-[11px] font-sans font-bold uppercase tracking-widest text-neutral-400">
-                    CATALOG MANAGEMENT
+                    CATALOG & LOGISTICS MANAGEMENT
                   </span>
                   <h2 className="font-nike text-3xl sm:text-4xl font-black uppercase tracking-tight text-black mt-0.5">
                     INVENTORY & SKU MATRIX
                   </h2>
+                  <p className="text-xs text-neutral-500 font-sans mt-0.5">
+                    Precision catalog specifications, in-place spec editing, warehouse quotas, and live drops.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={handleOpenAddProduct}
+                    className="px-5 py-2.5 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm whitespace-nowrap"
+                  >
+                    <Plus size={15} />
+                    <span>Register New Spec</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Category Filter Pills */}
-              <div className="flex flex-wrap gap-2">
-                {(['ALL', 'Heavy Twill', 'GORE-TEX', 'Cordura', 'Ripstop'] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setInventoryCategoryFilter(cat)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
-                      inventoryCategoryFilter === cat
-                        ? 'bg-black text-white shadow-xs'
-                        : 'bg-neutral-100 text-neutral-600 hover:text-black hover:bg-neutral-200'
-                    }`}
+              {/* 4 Inventory Operational KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl space-y-1 shadow-xs">
+                  <span className="text-[10px] font-bold uppercase text-neutral-400 block tracking-wider">
+                    Total Active SKUs
+                  </span>
+                  <p className="font-nike text-2xl sm:text-3xl font-black text-black">
+                    {inventory.length}
+                  </p>
+                  <span className="text-[11px] text-neutral-500 font-sans block">
+                    All Categories Active
+                  </span>
+                </div>
+
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl space-y-1 shadow-xs">
+                  <span className="text-[10px] font-bold uppercase text-neutral-400 block tracking-wider">
+                    Depot Stock Units
+                  </span>
+                  <p className="font-nike text-2xl sm:text-3xl font-black text-black">
+                    {inventory.reduce((sum, i) => sum + i.stock, 0)}
+                  </p>
+                  <span className="text-[11px] text-neutral-500 font-sans block">
+                    Tokyo & Berlin Hubs
+                  </span>
+                </div>
+
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl space-y-1 shadow-xs">
+                  <span className="text-[10px] font-bold uppercase text-neutral-400 block tracking-wider">
+                    Low Stock Thresholds
+                  </span>
+                  <p className={`font-nike text-2xl sm:text-3xl font-black ${
+                    inventory.filter((i) => i.stock <= i.reorderPoint).length > 0 ? 'text-amber-600' : 'text-black'
+                  }`}>
+                    {inventory.filter((i) => i.stock <= i.reorderPoint).length}
+                  </p>
+                  <span className="text-[11px] text-neutral-500 font-sans block">
+                    Reorder Triggered
+                  </span>
+                </div>
+
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl space-y-1 shadow-xs">
+                  <span className="text-[10px] font-bold uppercase text-neutral-400 block tracking-wider">
+                    Retail Asset Value
+                  </span>
+                  <p className="font-nike text-2xl sm:text-3xl font-black text-black">
+                    {formatPrice(inventory.reduce((sum, i) => sum + i.stock * i.price, 0))}
+                  </p>
+                  <span className="text-[11px] text-neutral-500 font-sans block">
+                    Real-time Valued
+                  </span>
+                </div>
+              </div>
+
+              {/* Category Filter Pills & Search */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <div className="flex flex-wrap gap-2">
+                  {(['ALL', 'Heavy Twill', 'GORE-TEX', 'Cordura', 'Ripstop'] as const).map((cat) => {
+                    const count = cat === 'ALL'
+                      ? inventory.length
+                      : inventory.filter((i) => i.material.toLowerCase().includes(cat.toLowerCase())).length;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setInventoryCategoryFilter(cat)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                          inventoryCategoryFilter === cat
+                            ? 'bg-black text-white shadow-xs'
+                            : 'bg-neutral-100 text-neutral-600 hover:text-black hover:bg-neutral-200'
+                        }`}
+                      >
+                        <span>{cat}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          inventoryCategoryFilter === cat ? 'bg-neutral-800 text-white' : 'bg-neutral-200 text-neutral-600'
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <span className="text-xs text-neutral-500 font-sans">
+                  Showing <strong>{filteredInventory.length}</strong> of {inventory.length} specs
+                </span>
+              </div>
+
+              {/* MOBILE RESPONSIVE CARD VIEW (for small screens < lg) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
+                {filteredInventory.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white border border-neutral-200 rounded-2xl p-5 shadow-xs space-y-3 relative hover:border-black transition-colors"
                   >
-                    {cat}
-                  </button>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-wider block">
+                          {item.sku}
+                        </span>
+                        <h4 className="font-nike text-lg font-black uppercase text-black leading-tight mt-0.5">
+                          {item.name}
+                        </h4>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase flex-shrink-0 ${
+                          item.stock > item.reorderPoint
+                            ? 'bg-neutral-100 text-black border border-neutral-200'
+                            : item.stock > 0
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {item.stock > item.reorderPoint ? 'IN STOCK' : item.stock > 0 ? 'LOW STOCK' : 'OUT OF STOCK'}
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-neutral-50 rounded-xl space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-neutral-400 font-bold uppercase text-[10px]">Textile</span>
+                        <span className="font-semibold text-neutral-800">{item.material}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-neutral-400 font-bold uppercase text-[10px]">Crown</span>
+                        <span className="font-semibold text-neutral-800">{item.category}</span>
+                      </div>
+                      <div className="flex justify-between items-baseline pt-1 border-t border-neutral-200">
+                        <span className="text-neutral-400 font-bold uppercase text-[10px]">Price</span>
+                        <span className="font-nike text-lg font-black text-black">
+                          {formatPrice(item.price)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-neutral-400 font-bold uppercase text-[10px]">Available Units</span>
+                        <span className="font-bold text-black text-sm">
+                          {item.stock} units <span className="text-[10px] text-neutral-400 font-normal font-sans">(min: {item.reorderPoint})</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Card Action Buttons */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => handleEditProduct(item)}
+                        className="flex-1 py-2.5 bg-neutral-100 hover:bg-black hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Edit3 size={13} />
+                        <span>Edit Spec</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          restockProduct(item.id, 25);
+                          showNotice(`Restocked +25 units for ${item.name}!`);
+                        }}
+                        className="px-3.5 py-2.5 bg-neutral-100 hover:bg-black hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors"
+                        title="Restock +25 Units"
+                      >
+                        +25
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete SKU ${item.name} (${item.sku})?`)) {
+                            deleteProduct(item.id);
+                            showNotice(`Deleted ${item.name}`);
+                          }
+                        }}
+                        className="p-2.5 text-neutral-400 hover:text-red-600 rounded-xl hover:bg-neutral-100 transition-colors"
+                        title="Delete Spec"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              {/* Inventory Table */}
-              <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-xs">
+              {/* DESKTOP INVENTORY DATA TABLE (for screens >= lg) */}
+              <div className="hidden lg:block bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-sans min-w-[1000px]">
+                  <table className="w-full text-left text-xs font-sans min-w-[1050px]">
                     <thead className="bg-neutral-50 text-neutral-500 uppercase font-sans text-[11px] font-bold tracking-wider border-b border-neutral-200">
                       <tr>
-                        <th className="py-4 px-6 w-60">Product Silhouette</th>
-                        <th className="py-4 px-6 w-40">SKU Spec</th>
-                        <th className="py-4 px-6 min-w-[200px]">Textile / Material</th>
-                        <th className="py-4 px-6 w-32 whitespace-nowrap">Unit Price</th>
-                        <th className="py-4 px-6 w-40">Stock Allocation</th>
-                        <th className="py-4 px-6 w-36">Status</th>
-                        <th className="py-4 px-6 w-36 text-right">Stock Adjust</th>
+                        <th className="py-4.5 px-6 w-64">Product Silhouette</th>
+                        <th className="py-4.5 px-6 w-36">SKU Spec</th>
+                        <th className="py-4.5 px-6 min-w-[200px]">Textile / Material</th>
+                        <th className="py-4.5 px-6 w-36">Unit Price</th>
+                        <th className="py-4.5 px-6 w-44">Stock Allocation</th>
+                        <th className="py-4.5 px-6 w-36">Status</th>
+                        <th className="py-4.5 px-6 w-48 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 text-neutral-800">
                       {filteredInventory.map((item) => (
                         <tr key={item.id} className="hover:bg-neutral-50/80 transition-colors">
-                          <td className="py-4 px-6 font-bold text-black">
-                            {item.name}
+                          <td className="py-4.5 px-6">
+                            <span className="font-bold text-black text-sm block">
+                              {item.name}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider mt-0.5 block">
+                              {item.category}
+                            </span>
                           </td>
 
-                          <td className="py-4 px-6 font-mono text-neutral-500">
-                            {item.sku}
+                          <td className="py-4.5 px-6">
+                            <span className="font-mono text-xs font-semibold px-2.5 py-1 bg-neutral-100 rounded-md text-neutral-700">
+                              {item.sku}
+                            </span>
                           </td>
 
-                          <td className="py-4 px-6 text-neutral-600 font-medium">
+                          <td className="py-4.5 px-6 text-neutral-600 font-medium">
                             {item.material}
                           </td>
 
-                          <td className="py-4 px-6 font-nike text-2xl font-black text-black">
-                            ${item.price.toFixed(2)}
+                          <td className="py-4.5 px-6">
+                            <span className="font-nike text-2xl font-black text-black block">
+                              ${item.price.toFixed(2)}
+                            </span>
+                            <span className="text-[11px] font-mono text-neutral-400 block mt-0.5">
+                              {formatPrice(item.price)}
+                            </span>
                           </td>
 
-                          <td className="py-4 px-6">
+                          <td className="py-4.5 px-6">
                             <span className="font-bold text-black text-sm block">
                               {item.stock} Units
                             </span>
@@ -1477,39 +1690,49 @@ export const AdminPage: React.FC = () => {
                             </span>
                           </td>
 
-                          <td className="py-4 px-6">
+                          <td className="py-4.5 px-6">
                             <span
                               className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${
-                                item.stock > 25
+                                item.stock > item.reorderPoint
                                   ? 'bg-neutral-100 text-black border border-neutral-200'
-                                  : item.stock > 10
+                                  : item.stock > 0
                                   ? 'bg-amber-100 text-amber-800'
                                   : 'bg-red-100 text-red-800'
                               }`}
                             >
-                              {item.stock > 25 ? 'IN STOCK' : item.stock > 10 ? 'LOW STOCK' : 'RESTOCK'}
+                              {item.stock > item.reorderPoint ? 'IN STOCK' : item.stock > 0 ? 'LOW STOCK' : 'RESTOCK'}
                             </span>
                           </td>
 
-                          <td className="py-4 px-6 text-right">
+                          <td className="py-4.5 px-6 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleEditProduct(item)}
+                                className="px-3 py-1.5 bg-neutral-100 hover:bg-black hover:text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                                title="Edit Product Specification"
+                              >
+                                <Edit3 size={13} />
+                                <span>Edit</span>
+                              </button>
                               <button
                                 onClick={() => {
                                   restockProduct(item.id, 25);
                                   showNotice(`Restocked +25 units for ${item.name}!`);
                                 }}
-                                className="px-3.5 py-1.5 bg-neutral-100 hover:bg-black hover:text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap"
+                                className="px-3 py-1.5 bg-neutral-100 hover:bg-black hover:text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap"
+                                title="Add 25 Units"
                               >
-                                +25 Units
+                                +25
                               </button>
                               <button
                                 onClick={() => {
-                                  if (confirm(`Delete SKU ${item.name}?`)) {
+                                  if (confirm(`Delete SKU ${item.name} (${item.sku})?`)) {
                                     deleteProduct(item.id);
                                     showNotice(`Deleted ${item.name}`);
                                   }
                                 }}
-                                className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors"
+                                className="p-1.5 text-neutral-400 hover:text-red-600 rounded-full hover:bg-neutral-100 transition-colors"
+                                title="Delete SKU"
                               >
                                 <Trash2 size={15} />
                               </button>
@@ -2318,98 +2541,135 @@ export const AdminPage: React.FC = () => {
                 </h2>
               </div>
 
-              {/* DUAL CURRENCY ENGINE CONTROLLER (USD $ / GBP £) */}
-              <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-5 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* TRI-CURRENCY MONETARY ENGINE CONTROLLER (USD $ / GBP £ / EUR €) */}
+              <div className="bg-white border border-neutral-200 p-6 sm:p-8 rounded-2xl space-y-6 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-100">
                   <div>
                     <span className="text-[10px] font-sans font-bold uppercase tracking-widest text-neutral-400">
                       INTERNATIONAL MONETARY CONTROLLER
                     </span>
                     <h3 className="font-nike text-2xl font-black uppercase text-black mt-0.5">
-                      DUAL CURRENCY ENGINE (USD $ / GBP £)
+                      TRI-CURRENCY EXCHANGE ENGINE (USD • GBP • EUR)
                     </h3>
-                    <p className="text-xs text-neutral-500">
-                      Configure live conversion rates between US Dollars ($) and British Pounds (£). Cascades directly to storefront catalog, bag drawer, and express checkout.
+                    <p className="text-xs text-neutral-500 font-sans">
+                      Configure synchronized live conversion rates between US Dollars ($), British Pounds (£), and Euros (€). Cascades to storefront catalog, bags, and checkout.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-neutral-100 text-black border border-neutral-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                      <Globe size={13} />
-                      <span>Active Store Currency: <strong>{currency} ({currency === 'GBP' ? '£' : '$'})</strong></span>
+                    <span className="px-3.5 py-1.5 bg-neutral-100 text-black border border-neutral-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                      <Globe size={14} />
+                      <span>Active Storefront: <strong>{currency} ({currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'})</strong></span>
                     </span>
                   </div>
                 </div>
 
-                <form onSubmit={handleSaveExchangeRate} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      Exchange Rate (1 USD = ? GBP)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-neutral-400 text-sm">
-                        £
+                <form onSubmit={handleSaveExchangeRate} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                    
+                    {/* GBP Rate */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
+                        1 USD = ? GBP (£)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-neutral-500 text-sm">
+                          £
+                        </span>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.1"
+                          max="5.0"
+                          required
+                          value={editGbpRate}
+                          onChange={(e) => setEditGbpRate(e.target.value)}
+                          className="w-full bg-neutral-50 border border-neutral-300 pl-8 pr-3.5 py-2.5 text-sm font-mono font-bold text-black rounded-xl focus:outline-none focus:border-black"
+                        />
+                      </div>
+                      <span className="text-[10px] text-neutral-400 font-mono mt-1 block">
+                        Inverse: 1 GBP = ${(parseFloat(editGbpRate) > 0 ? (1 / parseFloat(editGbpRate)).toFixed(4) : '0.0000')} USD
                       </span>
-                      <input
-                        type="number"
-                        step="0.001"
-                        min="0.1"
-                        max="5.0"
-                        required
-                        value={editGbpRate}
-                        onChange={(e) => setEditGbpRate(e.target.value)}
-                        className="w-full bg-neutral-50 border border-neutral-300 pl-8 pr-3.5 py-2.5 text-sm font-mono font-bold text-black rounded-xl focus:outline-none focus:border-black"
-                      />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                      Inverse Rate (1 GBP = ? USD)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-neutral-400 text-sm">
-                        $
+                    {/* EUR Rate */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
+                        1 USD = ? EUR (€)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-neutral-500 text-sm">
+                          €
+                        </span>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.1"
+                          max="5.0"
+                          required
+                          value={editEurRate}
+                          onChange={(e) => setEditEurRate(e.target.value)}
+                          className="w-full bg-neutral-50 border border-neutral-300 pl-8 pr-3.5 py-2.5 text-sm font-mono font-bold text-black rounded-xl focus:outline-none focus:border-black"
+                        />
+                      </div>
+                      <span className="text-[10px] text-neutral-400 font-mono mt-1 block">
+                        Inverse: 1 EUR = ${(parseFloat(editEurRate) > 0 ? (1 / parseFloat(editEurRate)).toFixed(4) : '0.0000')} USD
                       </span>
-                      <input
-                        type="text"
-                        disabled
-                        value={parseFloat(editGbpRate) > 0 ? (1 / parseFloat(editGbpRate)).toFixed(4) : '0.0000'}
-                        className="w-full bg-neutral-100 border border-neutral-200 pl-8 pr-3.5 py-2.5 text-sm font-mono font-bold text-neutral-500 rounded-xl cursor-not-allowed"
-                      />
                     </div>
-                  </div>
 
-                  <div>
-                    <button
-                      type="submit"
-                      className="w-full py-2.5 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors shadow-xs flex items-center justify-center gap-1.5"
-                    >
-                      <Coins size={14} />
-                      <span>Save & Apply Exchange Rate</span>
-                    </button>
+                    {/* Live Indicator */}
+                    <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl space-y-0.5">
+                      <span className="text-[10px] font-bold uppercase text-neutral-400 block">Baseline Base</span>
+                      <p className="font-nike text-sm font-black text-black">1.00 USD ($)</p>
+                      <span className="text-[11px] text-emerald-600 font-bold block">✓ Auto-synchronized</span>
+                    </div>
+
+                    <div>
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 bg-black text-white hover:bg-neutral-800 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-xs flex items-center justify-center gap-2"
+                      >
+                        <Coins size={14} />
+                        <span>Update Rates</span>
+                      </button>
+                    </div>
+
                   </div>
                 </form>
 
                 {/* Conversion Preview Matrix */}
-                <div className="pt-2 border-t border-neutral-100">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block mb-2">
-                    LIVE CONVERSION PREVIEW MATRIX
+                <div className="pt-4 border-t border-neutral-100">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block mb-3">
+                    REAL-TIME TRI-CURRENCY CONVERSION MATRIX
                   </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {[
-                      { label: 'Sample Cap ($95)', usd: 95 },
-                      { label: 'Free Shipping Threshold ($150)', usd: 150 },
-                      { label: 'Apex Shell ($220)', usd: 220 },
-                      { label: 'Multi-Cap Cart ($340)', usd: 340 },
-                    ].map((sample) => (
-                      <div key={sample.label} className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl space-y-0.5">
-                        <span className="text-[10px] text-neutral-400 font-bold uppercase block truncate">{sample.label}</span>
-                        <div className="flex items-baseline justify-between font-mono">
-                          <span className="text-xs text-neutral-500">${sample.usd.toFixed(2)}</span>
-                          <span className="text-sm font-bold text-black">£{(sample.usd * (parseFloat(editGbpRate) || 0.79)).toFixed(2)}</span>
+                      { label: 'Technical Cap ($85)', usd: 85 },
+                      { label: 'Architectural Cap ($95)', usd: 95 },
+                      { label: 'Free Shipping ($150)', usd: 150 },
+                      { label: 'GORE-TEX Shell ($220)', usd: 220 },
+                    ].map((sample) => {
+                      const gbpVal = (sample.usd * (parseFloat(editGbpRate) || 0.79)).toFixed(2);
+                      const eurVal = (sample.usd * (parseFloat(editEurRate) || 0.92)).toFixed(2);
+                      return (
+                        <div key={sample.label} className="p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl space-y-1.5">
+                          <span className="text-[10px] text-neutral-500 font-bold uppercase block truncate">{sample.label}</span>
+                          <div className="space-y-1 font-mono text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-neutral-400">USD:</span>
+                              <span className="font-bold text-black">${sample.usd.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-neutral-400">GBP:</span>
+                              <span className="font-bold text-black">£{gbpVal}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-neutral-400">EUR:</span>
+                              <span className="font-bold text-black">€{eurVal}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -2887,13 +3147,23 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* Product Spec Modal */}
+      {/* Product Spec Modal (Add & Edit Spec Mode) */}
       <ProductModal
         isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
+        onClose={() => {
+          setIsProductModalOpen(false);
+          setEditingProduct(null);
+        }}
+        initialData={editingProduct}
         onSave={(data) => {
-          addProduct(data);
-          showNotice(`Added product SKU ${data.name}!`);
+          if (editingProduct) {
+            updateProduct(editingProduct.id, data);
+            showNotice(`Updated product SKU ${data.sku}!`);
+          } else {
+            addProduct(data);
+            showNotice(`Added product SKU ${data.sku}!`);
+          }
+          setEditingProduct(null);
         }}
       />
 

@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InventoryItem, CapCategory } from '../../types/product';
-import { X, Check, Image as ImageIcon } from 'lucide-react';
+import { X, Check, Image as ImageIcon, Edit3, Plus } from 'lucide-react';
+
+export interface ProductModalPayload {
+  name: string;
+  sku: string;
+  category: CapCategory;
+  material: string;
+  price: number;
+  stock: number;
+  reorderPoint: number;
+  status: 'IN STOCK' | 'LOW STOCK';
+  images: string[];
+  profile: string;
+  description?: string;
+}
 
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (item: Omit<InventoryItem, 'id'> & { images?: string[]; profile?: string; description?: string }) => void;
+  onSave: (item: ProductModalPayload) => void;
+  initialData?: (InventoryItem & { images?: string[]; profile?: string; description?: string }) | null;
 }
 
 const PRESET_IMAGES = [
@@ -15,7 +30,12 @@ const PRESET_IMAGES = [
   { label: 'Cordura Camp', url: 'https://images.unsplash.com/photo-1534215754734-18e55d13e346?auto=format&fit=crop&w=800&q=80' },
 ];
 
-export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave }) => {
+export const ProductModal: React.FC<ProductModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}) => {
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [category, setCategory] = useState<CapCategory>('STRUCTURED');
@@ -27,6 +47,33 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
   const [imageUrl, setImageUrl] = useState(PRESET_IMAGES[0].url);
   const [description, setDescription] = useState('');
 
+  const isEditMode = Boolean(initialData);
+
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name || '');
+      setSku(initialData.sku || '');
+      setCategory(initialData.category || 'STRUCTURED');
+      setProfile(initialData.profile || '6-PANEL HIGH');
+      setMaterial(initialData.material || 'HEAVY TWILL');
+      setPrice(initialData.price?.toString() || '85');
+      setStock(initialData.stock?.toString() || '30');
+      setReorderPoint(initialData.reorderPoint?.toString() || '15');
+      setImageUrl(initialData.images?.[0] || PRESET_IMAGES[0].url);
+      setDescription(initialData.description || '');
+    } else {
+      setName('');
+      setSku('');
+      setCategory('STRUCTURED');
+      setProfile('6-PANEL HIGH');
+      setMaterial('HEAVY TWILL');
+      setPrice('85');
+      setStock('30');
+      setReorderPoint('15');
+      setImageUrl(PRESET_IMAGES[0].url);
+      setDescription('');
+    }
+  }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
@@ -57,19 +104,39 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn font-sans">
-      <div className="w-full max-w-xl bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-xl bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex justify-between items-start pb-4 border-b border-neutral-200">
           <div>
-            <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-              DEPOT MATRIX REGISTRATION
-            </span>
-            <h3 className="font-nike text-3xl font-black uppercase text-black leading-tight">
-              REGISTER NEW HEADWEAR SPEC
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
+                DEPOT MATRIX CATALOG
+              </span>
+              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${
+                isEditMode ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-800'
+              }`}>
+                {isEditMode ? 'EDIT MODE' : 'NEW SPEC'}
+              </span>
+            </div>
+
+            <h3 className="font-nike text-2xl sm:text-3xl font-black uppercase text-black leading-tight flex items-center gap-2">
+              {isEditMode ? (
+                <>
+                  <Edit3 size={24} className="text-black" />
+                  <span>EDIT SPEC // {initialData?.sku}</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={24} className="text-black" />
+                  <span>REGISTER NEW HEADWEAR SPEC</span>
+                </>
+              )}
             </h3>
             <p className="text-xs text-neutral-500">
-              Create product specification with synchronized Tokyo & Berlin warehouse allocation.
+              {isEditMode
+                ? 'Update catalog parameters, textile materials, stock allocation, and pricing.'
+                : 'Create product specification with synchronized Tokyo & Berlin warehouse allocation.'}
             </p>
           </div>
           <button
@@ -94,7 +161,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                 placeholder="e.g. MONOLITH 04 // GRAPHITE"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 uppercase font-medium text-xs focus:outline-none focus:border-black"
+                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 uppercase font-medium text-xs focus:outline-none focus:border-black"
               />
             </div>
             <div>
@@ -107,7 +174,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                 placeholder="e.g. RLX-SPEC-240"
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
-                className="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 font-mono text-xs uppercase focus:outline-none focus:border-black"
+                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 font-mono text-xs uppercase focus:outline-none focus:border-black"
               />
             </div>
           </div>
@@ -121,7 +188,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as CapCategory)}
-                className="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black bg-white"
+                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black bg-white"
               >
                 <option value="STRUCTURED">STRUCTURED 6-PANEL</option>
                 <option value="TECHNICAL">TECHNICAL GORE-TEX</option>
@@ -137,7 +204,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
               <select
                 value={profile}
                 onChange={(e) => setProfile(e.target.value)}
-                className="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black bg-white"
+                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black bg-white"
               >
                 <option value="6-PANEL HIGH">6-PANEL HIGH CROWN</option>
                 <option value="5-PANEL LOW">5-PANEL LOW PROFILE</option>
@@ -159,20 +226,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                 step="5"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
+                className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
               />
             </div>
             <div>
               <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                INITIAL UNITS
+                {isEditMode ? 'CURRENT STOCK' : 'INITIAL UNITS'}
               </label>
               <input
                 type="number"
                 required
-                min="1"
+                min="0"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
-                className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
+                className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
               />
             </div>
             <div>
@@ -185,7 +252,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                 min="1"
                 value={reorderPoint}
                 onChange={(e) => setReorderPoint(e.target.value)}
-                className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
+                className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
               />
             </div>
           </div>
@@ -201,7 +268,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
               placeholder="e.g. GORE-TEX 3L PRO"
-              className="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black"
+              className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black"
             />
           </div>
 
@@ -218,7 +285,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                     key={preset.label}
                     type="button"
                     onClick={() => setImageUrl(preset.url)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 relative transition-all ${
+                    className={`aspect-square rounded-xl overflow-hidden border-2 relative transition-all ${
                       isSelected ? 'border-black ring-2 ring-black' : 'border-neutral-200 opacity-70 hover:opacity-100'
                     }`}
                   >
@@ -236,7 +303,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                 placeholder="Or paste custom image URL..."
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-black pl-8"
+                className="w-full border border-neutral-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-black pl-8"
               />
               <ImageIcon size={14} className="absolute left-2.5 top-3.5 text-neutral-400" />
             </div>
@@ -251,10 +318,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
               placeholder="e.g. Engineered structural cap crafted from waterproof materials..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-neutral-300 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-black font-sans"
+              className="w-full border border-neutral-300 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-black font-sans"
             />
           </div>
-
 
           {/* Action Buttons */}
           <div className="pt-4 flex justify-end gap-3 border-t border-neutral-200">
@@ -270,7 +336,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
               className="px-8 py-3 bg-black text-white rounded-full uppercase font-sans text-xs font-bold hover:bg-neutral-800 transition-all shadow-md flex items-center gap-2"
             >
               <Check size={14} />
-              <span>Save & Publish Spec</span>
+              <span>{isEditMode ? 'Update & Save Spec' : 'Save & Publish Spec'}</span>
             </button>
           </div>
 

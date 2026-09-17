@@ -3,13 +3,13 @@ import { useCart } from '../../context/CartContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCurrency } from '../../context/CurrencyContext';
-import { ShoppingBag, Menu, X, Search, Heart, User, ArrowRight, Camera, ShieldCheck, LogOut } from 'lucide-react';
+import { ShoppingBag, Menu, X, Search, Heart, User, ArrowRight, Camera, ShieldCheck, LogOut, Globe } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { totalItems, openCart } = useCart();
   const { currentPage, goToShop, goToHome, goToDashboard, goToLookbook, goToAdmin, searchQuery, setSearchQuery } = useNavigation();
   const { currentUser, logout, openAuthModal } = useAuth();
-  const { currency, setCurrency } = useCurrency();
+  const { currency, setCurrency, openCurrencyModal } = useCurrency();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -83,7 +83,7 @@ export const Navbar: React.FC = () => {
           )}
           <span>|</span>
 
-          {/* Dual Currency Switcher Pill */}
+          {/* Tri-Currency Switcher Pill */}
           <div className="flex items-center bg-neutral-200/80 p-0.5 rounded-full text-[11px] font-bold">
             <button
               onClick={() => setCurrency('USD')}
@@ -103,7 +103,25 @@ export const Navbar: React.FC = () => {
             >
               £ GBP
             </button>
+            <button
+              onClick={() => setCurrency('EUR')}
+              className={`px-2 py-0.5 rounded-full transition-all ${
+                currency === 'EUR' ? 'bg-white text-black shadow-2xs font-black' : 'text-neutral-600 hover:text-black'
+              }`}
+              title="Switch to Euro (€)"
+            >
+              € EUR
+            </button>
           </div>
+
+          <button
+            onClick={openCurrencyModal}
+            className="hover:text-black transition-colors flex items-center gap-1 text-[11px] font-semibold text-neutral-600"
+            title="Open Region & Currency Selector"
+          >
+            <Globe size={13} />
+            <span>Region</span>
+          </button>
 
           <span>|</span>
           <button
@@ -122,14 +140,22 @@ export const Navbar: React.FC = () => {
       <header className="sticky top-0 z-40 w-full bg-white border-b border-neutral-200 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
-          {/* Mobile Menu Trigger */}
-          <div className="flex items-center gap-3 lg:hidden">
+          {/* Mobile Menu Trigger & Region Pill */}
+          <div className="flex items-center gap-2 lg:hidden">
             <button
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-label="Toggle Navigation Menu"
               className="p-1.5 -ml-1.5 text-black hover:bg-neutral-100 rounded-full transition-colors focus:outline-none"
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+            <button
+              onClick={openCurrencyModal}
+              className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 rounded-full border border-neutral-200 text-[11px] font-bold text-black flex items-center gap-1 transition-colors"
+              title="Change Currency & Region"
+            >
+              <Globe size={12} />
+              <span>{currency}</span>
             </button>
           </div>
 
@@ -267,14 +293,18 @@ export const Navbar: React.FC = () => {
       <div className="bg-[#f5f5f5] py-2.5 px-4 text-center text-xs font-sans font-medium text-neutral-800 border-b border-neutral-200">
         {currentUser ? (
           <p>
-            Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Raylux Member • {currency === 'GBP' ? 'Free Dispatch on Orders £120+' : 'Free Dispatch on Orders $150+'}.{' '}
+            Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Raylux Member • {
+              currency === 'GBP' ? 'Free Dispatch on Orders £120+' : currency === 'EUR' ? 'Free Dispatch on Orders €140+' : 'Free Dispatch on Orders $150+'
+            }.{' '}
             <button onClick={() => goToDashboard('user')} className="underline font-bold hover:text-black">
               View Member Portal
             </button>
           </p>
         ) : (
           <p>
-            Members: Complimentary Worldwide Dispatch on orders {currency === 'GBP' ? '£120+' : '$150+'} • 30-Day Risk-Free Returns.{' '}
+            Members: Complimentary Worldwide Dispatch on orders {
+              currency === 'GBP' ? '£120+' : currency === 'EUR' ? '€140+' : '$150+'
+            } • 30-Day Risk-Free Returns.{' '}
             <button onClick={() => openAuthModal('signin')} className="underline font-bold hover:text-black">
               Join or Sign In
             </button>
@@ -298,11 +328,35 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 font-sans">
-            <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 font-sans">
+            {/* Mobile Search Bar */}
+            <form
+              onSubmit={(e) => {
+                handleSearchSubmit(e);
+                setMobileMenuOpen(false);
+              }}
+              className="relative"
+            >
+              <div className="flex items-center bg-neutral-100 rounded-2xl px-4 py-3 border border-neutral-200 focus-within:border-black transition-colors">
+                <Search size={18} className="text-neutral-500 mr-2.5 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search technical caps & materials..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent text-sm font-sans text-black placeholder-neutral-500 focus:outline-none w-full"
+                />
+              </div>
+            </form>
+
+            <div className="space-y-3">
+              <span className="font-sans text-[10px] font-bold uppercase text-neutral-400 tracking-widest block">
+                FLAGSHIP COLLECTIONS
+              </span>
+
               <button
                 onClick={() => { goToHome(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-2xl font-nike font-black uppercase tracking-tight py-2 text-left border-b border-neutral-100"
+                className="w-full flex items-center justify-between text-2xl font-nike font-black uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-black hover:opacity-75"
               >
                 <span>NEW & FEATURED</span>
                 <ArrowRight size={18} />
@@ -310,7 +364,7 @@ export const Navbar: React.FC = () => {
 
               <button
                 onClick={() => { goToShop(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-2xl font-nike font-black uppercase tracking-tight py-2 text-left border-b border-neutral-100"
+                className="w-full flex items-center justify-between text-2xl font-nike font-black uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-black hover:opacity-75"
               >
                 <span>SHOP ALL CAPS</span>
                 <ArrowRight size={18} />
@@ -318,7 +372,7 @@ export const Navbar: React.FC = () => {
 
               <button
                 onClick={() => { goToShop('STRUCTURED'); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-700"
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black"
               >
                 <span>MEN'S 6-PANEL</span>
                 <ArrowRight size={16} />
@@ -326,43 +380,43 @@ export const Navbar: React.FC = () => {
 
               <button
                 onClick={() => { goToShop('TECHNICAL'); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-700"
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black"
               >
-                <span>GORE-TEX® ALPINE</span>
+                <span>GORE-TEX® SERIES</span>
                 <ArrowRight size={16} />
               </button>
 
               <button
                 onClick={() => { goToLookbook(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-700"
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black"
               >
-                <span>LOOKBOOK</span>
+                <span>LOOKBOOK EDITORIAL</span>
                 <Camera size={16} />
               </button>
             </div>
 
-            <div className="pt-6 space-y-3">
-              <span className="font-sans text-xs font-bold uppercase text-neutral-400 tracking-wider block">
+            <div className="pt-4 space-y-3">
+              <span className="font-sans text-[10px] font-bold uppercase text-neutral-400 tracking-widest block">
                 MEMBER ACCOUNT
               </span>
 
               {currentUser ? (
-                <div className="p-4 bg-neutral-100 rounded-xl space-y-3">
+                <div className="p-4 bg-neutral-100 rounded-2xl space-y-3 border border-neutral-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       {currentUser.avatar ? (
-                        <img src={currentUser.avatar} alt={currentUser.name} className="w-9 h-9 rounded-full object-cover" />
+                        <img src={currentUser.avatar} alt={currentUser.name} className="w-10 h-10 rounded-full object-cover border border-neutral-300" />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs">
+                        <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm">
                           {currentUser.name[0]}
                         </div>
                       )}
                       <div>
-                        <p className="font-bold text-black text-xs">{currentUser.name}</p>
-                        <p className="text-[10px] text-neutral-500">{currentUser.email}</p>
+                        <p className="font-bold text-black text-sm">{currentUser.name}</p>
+                        <p className="text-[11px] text-neutral-500">{currentUser.email}</p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold bg-black text-white px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold bg-black text-white px-2.5 py-1 rounded-full uppercase">
                       {currentUser.status}
                     </span>
                   </div>
@@ -370,86 +424,118 @@ export const Navbar: React.FC = () => {
                   <div className="pt-2 flex gap-2 border-t border-neutral-200">
                     <button
                       onClick={() => { goToDashboard('user'); setMobileMenuOpen(false); }}
-                      className="flex-1 py-2 bg-black text-white text-xs font-bold uppercase rounded-lg text-center"
+                      className="flex-1 py-2.5 bg-black text-white text-xs font-bold uppercase rounded-xl text-center shadow-xs"
                     >
-                      Portal
+                      Member Portal
                     </button>
                     <button
                       onClick={() => { logout(); setMobileMenuOpen(false); }}
-                      className="px-3 py-2 bg-white border border-neutral-300 text-neutral-700 text-xs font-bold uppercase rounded-lg hover:border-black"
+                      className="px-4 py-2.5 bg-white border border-neutral-300 text-neutral-800 text-xs font-bold uppercase rounded-xl hover:border-black"
                     >
                       Sign Out
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <button
                     onClick={() => { openAuthModal('signin'); setMobileMenuOpen(false); }}
-                    className="w-full py-3.5 bg-black text-white text-center font-sans text-xs font-bold uppercase rounded-xl tracking-wider shadow"
+                    className="w-full py-3.5 bg-black text-white text-center font-sans text-xs font-bold uppercase rounded-2xl tracking-wider shadow-sm"
                   >
                     SIGN IN TO ACCOUNT
                   </button>
                   <button
                     onClick={() => { openAuthModal('signup'); setMobileMenuOpen(false); }}
-                    className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-black text-center font-sans text-xs font-bold uppercase rounded-xl tracking-wider border border-neutral-200"
+                    className="w-full py-3.5 bg-neutral-100 hover:bg-neutral-200 text-black text-center font-sans text-xs font-bold uppercase rounded-2xl tracking-wider border border-neutral-200"
                   >
                     JOIN RAYLUX (CREATE ACCOUNT)
                   </button>
                 </div>
               )}
 
-              <button
-                onClick={() => { goToDashboard('user'); setMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-3 p-3.5 bg-neutral-50 border border-neutral-200 text-left font-sans text-xs font-semibold uppercase rounded-md"
-              >
-                <User size={16} />
-                <span>MY ORDERS & TRACKING</span>
-              </button>
-              <button
-                onClick={() => { goToDashboard('wishlist'); setMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-3 p-3.5 bg-neutral-50 border border-neutral-200 text-left font-sans text-xs font-semibold uppercase rounded-md"
-              >
-                <Heart size={16} />
-                <span>SAVED FAVORITES</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={() => { goToDashboard('orders'); setMobileMenuOpen(false); }}
+                  className="flex items-center gap-2 p-3 bg-neutral-50 border border-neutral-200 text-left font-sans text-xs font-bold uppercase rounded-xl hover:border-black transition-colors"
+                >
+                  <User size={15} />
+                  <span>My Orders</span>
+                </button>
+                <button
+                  onClick={() => { goToDashboard('wishlist'); setMobileMenuOpen(false); }}
+                  className="flex items-center gap-2 p-3 bg-neutral-50 border border-neutral-200 text-left font-sans text-xs font-bold uppercase rounded-xl hover:border-black transition-colors"
+                >
+                  <Heart size={15} />
+                  <span>Favorites</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => { goToAdmin(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between p-3.5 bg-black text-white text-left font-sans text-xs font-bold uppercase rounded-md shadow-sm"
+                className="w-full flex items-center justify-between p-3.5 bg-black text-white text-left font-sans text-xs font-bold uppercase rounded-xl shadow-sm hover:bg-neutral-800 transition-colors"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <ShieldCheck size={16} />
                   <span>ADMIN OPERATIONS CONSOLE</span>
                 </div>
-                <span className="text-[10px] bg-neutral-800 text-white px-2 py-0.5 rounded">RESTRICTED</span>
+                <span className="text-[9px] font-mono bg-neutral-800 text-white px-2 py-0.5 rounded">ACCESS</span>
               </button>
             </div>
 
           </div>
 
-          <div className="p-6 border-t border-neutral-200 bg-neutral-50 font-sans text-xs text-neutral-600 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-neutral-400 uppercase text-[10px]">Currency:</span>
-              <div className="flex items-center bg-neutral-200 p-0.5 rounded-full text-xs font-bold">
-                <button
-                  onClick={() => setCurrency('USD')}
-                  className={`px-2 py-0.5 rounded-full ${
-                    currency === 'USD' ? 'bg-white text-black shadow-xs' : 'text-neutral-600'
-                  }`}
-                >
-                  $ USD
-                </button>
-                <button
-                  onClick={() => setCurrency('GBP')}
-                  className={`px-2 py-0.5 rounded-full ${
-                    currency === 'GBP' ? 'bg-white text-black shadow-xs' : 'text-neutral-600'
-                  }`}
-                >
-                  £ GBP
-                </button>
-              </div>
+          {/* Mobile Drawer Footer: Tri-Currency Switcher + Region Popup Opener */}
+          <div className="p-5 border-t border-neutral-200 bg-neutral-50 font-sans text-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-neutral-500 uppercase text-[11px] flex items-center gap-1.5">
+                <Globe size={13} className="text-black" />
+                <span>Store Region & Currency</span>
+              </span>
+              <button
+                onClick={() => { setMobileMenuOpen(false); openCurrencyModal(); }}
+                className="text-[11px] font-bold text-black underline uppercase hover:opacity-75"
+              >
+                Change Modal
+              </button>
             </div>
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">WORLDWIDE DISPATCH</span>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => setCurrency('USD')}
+                className={`py-2 px-1 rounded-xl text-xs font-bold text-center border transition-all ${
+                  currency === 'USD'
+                    ? 'bg-black text-white border-black shadow-xs font-black'
+                    : 'bg-white text-neutral-700 border-neutral-200 hover:border-black'
+                }`}
+              >
+                🇺🇸 $ USD
+              </button>
+              <button
+                onClick={() => setCurrency('GBP')}
+                className={`py-2 px-1 rounded-xl text-xs font-bold text-center border transition-all ${
+                  currency === 'GBP'
+                    ? 'bg-black text-white border-black shadow-xs font-black'
+                    : 'bg-white text-neutral-700 border-neutral-200 hover:border-black'
+                }`}
+              >
+                🇬🇧 £ GBP
+              </button>
+              <button
+                onClick={() => setCurrency('EUR')}
+                className={`py-2 px-1 rounded-xl text-xs font-bold text-center border transition-all ${
+                  currency === 'EUR'
+                    ? 'bg-black text-white border-black shadow-xs font-black'
+                    : 'bg-white text-neutral-700 border-neutral-200 hover:border-black'
+                }`}
+              >
+                🇪🇺 € EUR
+              </button>
+            </div>
+
+            <div className="flex justify-between items-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest pt-1">
+              <span>WORLDWIDE DISPATCH</span>
+              <span>RAYLUX LAB</span>
+            </div>
           </div>
         </div>
       )}

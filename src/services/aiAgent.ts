@@ -45,7 +45,7 @@ export function saveAIAgentConfig(config: AIAgentConfig): void {
 export async function queryRayluxAgent(
   userPrompt: string,
   orders: Order[],
-  currency: 'USD' | 'GBP',
+  currency: 'USD' | 'GBP' | 'EUR',
   exchangeRate: number,
   config = getAIAgentConfig()
 ): Promise<string> {
@@ -58,7 +58,7 @@ export async function queryRayluxAgent(
       const orderNum = orderMatch[0].toUpperCase();
       const found = orders.find((o) => o.orderNumber.toUpperCase() === orderNum);
       if (found) {
-        const symbol = found.currency === 'GBP' ? '£' : '$';
+        const symbol = found.currency === 'GBP' ? '£' : found.currency === 'EUR' ? '€' : '$';
         return `[ORDER TELEMETRY FOUND]\n\n• Order Number: ${found.orderNumber}\n• Status: ${found.status}\n• Carrier: ${found.carrier}\n• Waybill / Tracking: ${found.trackingNumber}\n• Total: ${symbol}${found.total.toFixed(2)}\n• Destination: ${found.shippingAddress.city}, ${found.shippingAddress.country}\n\nDispatch manifest is synchronized. Would you like to file a support ticket or request delivery updates?`;
       } else {
         return `[ORDER LOOKUP: NOT FOUND]\nWe could not locate order "${orderNum}" in our live dispatch database. Please check your tracking code or view "My Orders" in your member dashboard.`;
@@ -143,7 +143,7 @@ export async function queryRayluxAgent(
 export const askGeminiAgent = (
   userPrompt: string,
   orders: Order[],
-  currency: 'USD' | 'GBP' = 'USD',
+  currency: 'USD' | 'GBP' | 'EUR' = 'USD',
   exchangeRate: number = 0.79,
   config = getAIAgentConfig()
 ) => queryRayluxAgent(userPrompt, orders, currency, exchangeRate, config);
