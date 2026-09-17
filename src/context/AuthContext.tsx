@@ -16,6 +16,10 @@ interface AuthContextType {
   loginWithGoogle: (googleProfile?: { name: string; email: string; avatar?: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => void;
+  addCustomer: (userData: Omit<User, 'id'>) => User;
+  updateCustomer: (userId: string, data: Partial<User>) => void;
+  deleteCustomer: (userId: string) => void;
+  setCustomerStatus: (userId: string, status: 'ACTIVE' | 'VIP' | 'SUSPENDED') => void;
   isAuthModalOpen: boolean;
   authModalMode: 'signin' | 'signup' | 'forgot';
   openAuthModal: (mode?: 'signin' | 'signup' | 'forgot') => void;
@@ -332,6 +336,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRegisteredUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
   };
 
+  const addCustomer = (userData: Omit<User, 'id'>): User => {
+    const newCust: User = {
+      ...userData,
+      id: `usr-${Date.now().toString(36)}`,
+      joinedDate: userData.joinedDate || new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      role: userData.role || 'customer',
+      totalOrders: userData.totalOrders || 0,
+      totalSpent: userData.totalSpent || 0,
+      status: userData.status || 'ACTIVE',
+    };
+    setRegisteredUsers((prev) => [newCust, ...prev]);
+    return newCust;
+  };
+
+  const updateCustomer = (userId: string, data: Partial<User>) => {
+    setRegisteredUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, ...data } : u))
+    );
+    if (currentUser?.id === userId) {
+      setCurrentUser((prev) => (prev ? { ...prev, ...data } : null));
+    }
+  };
+
+  const deleteCustomer = (userId: string) => {
+    setRegisteredUsers((prev) => prev.filter((u) => u.id !== userId));
+  };
+
+  const setCustomerStatus = (userId: string, status: 'ACTIVE' | 'VIP' | 'SUSPENDED') => {
+    updateCustomer(userId, { status });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -342,6 +377,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         logout,
         updateProfile,
+        addCustomer,
+        updateCustomer,
+        deleteCustomer,
+        setCustomerStatus,
         isAuthModalOpen,
         authModalMode,
         openAuthModal,

@@ -69,9 +69,35 @@ export interface User {
   role: 'customer' | 'admin';
   phone?: string;
   sizePreference?: string;
-  status: 'ACTIVE' | 'VIP';
+  status: 'ACTIVE' | 'VIP' | 'SUSPENDED';
   totalOrders?: number;
   totalSpent?: number;
+  notes?: string;
+  address?: string;
+  tags?: string[];
+}
+
+export interface HeroBannerConfig {
+  badgeText: string;
+  badgeActive: boolean;
+  topRightCaptionLine1: string;
+  topRightCaptionLine2: string;
+  superTitle: string;
+  mainTitle: string;
+  description: string;
+  imageUrl: string;
+  primaryBtnText: string;
+  primaryBtnAction: 'shop' | 'lookbook';
+  secondaryBtnText: string;
+  secondaryBtnAction: 'shop' | 'lookbook';
+  secondaryBtnActive: boolean;
+}
+
+export interface AnnouncementConfig {
+  active: boolean;
+  text: string;
+  discountCode?: string;
+  linkText?: string;
 }
 
 export interface OrderItem {

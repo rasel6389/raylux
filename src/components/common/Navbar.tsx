@@ -3,6 +3,7 @@ import { useCart } from '../../context/CartContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useStore } from '../../context/StoreContext';
 import { ShoppingBag, Menu, X, Search, Heart, User, ArrowRight, Camera, ShieldCheck, LogOut, Globe } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -10,7 +11,24 @@ export const Navbar: React.FC = () => {
   const { currentPage, goToShop, goToHome, goToDashboard, goToLookbook, goToAdmin, searchQuery, setSearchQuery } = useNavigation();
   const { currentUser, logout, openAuthModal } = useAuth();
   const { currency, setCurrency, openCurrencyModal } = useCurrency();
+  const { announcementConfig } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAnnouncementDismissed, setIsAnnouncementDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('raylux_announcement_dismissed_v1') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismissAnnouncement = () => {
+    setIsAnnouncementDismissed(true);
+    try {
+      sessionStorage.setItem('raylux_announcement_dismissed_v1', 'true');
+    } catch {
+      // ignore
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,28 +307,54 @@ export const Navbar: React.FC = () => {
         </div>
       </header>
 
-      {/* 3. NIKE ANNOUNCEMENT SUB-HEADER */}
-      <div className="bg-[#f5f5f5] py-2.5 px-4 text-center text-xs font-sans font-medium text-neutral-800 border-b border-neutral-200">
-        {currentUser ? (
-          <p>
-            Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Raylux Member • {
-              currency === 'GBP' ? 'Free Dispatch on Orders £120+' : currency === 'EUR' ? 'Free Dispatch on Orders €140+' : 'Free Dispatch on Orders $150+'
-            }.{' '}
-            <button onClick={() => goToDashboard('user')} className="underline font-bold hover:text-black">
-              View Member Portal
-            </button>
-          </p>
-        ) : (
-          <p>
-            Members: Complimentary Worldwide Dispatch on orders {
-              currency === 'GBP' ? '£120+' : currency === 'EUR' ? '€140+' : '$150+'
-            } • 30-Day Risk-Free Returns.{' '}
-            <button onClick={() => openAuthModal('signin')} className="underline font-bold hover:text-black">
-              Join or Sign In
-            </button>
-          </p>
-        )}
-      </div>
+      {/* 3. NIKE ANNOUNCEMENT SUB-HEADER (WITH DISMISS BUTTON) */}
+      {!isAnnouncementDismissed && announcementConfig?.active && (
+        <div className="bg-[#f5f5f5] py-2.5 px-6 sm:px-10 text-center text-xs font-sans font-medium text-neutral-800 border-b border-neutral-200 relative flex items-center justify-center animate-fadeIn">
+          <div className="max-w-4xl mx-auto pr-6">
+            {currentUser ? (
+              <p>
+                Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Raylux Member • {
+                  currency === 'GBP' ? 'Free Dispatch on Orders £120+' : currency === 'EUR' ? 'Free Dispatch on Orders €140+' : 'Free Dispatch on Orders $150+'
+                }.{' '}
+                <button onClick={() => goToDashboard('user')} className="underline font-bold hover:text-black cursor-pointer ml-1">
+                  View Member Portal
+                </button>
+              </p>
+            ) : (
+              <p>
+                {announcementConfig.text ? (
+                  <span>
+                    {announcementConfig.text}{' '}
+                    {announcementConfig.discountCode && (
+                      <span className="font-bold text-black bg-neutral-200/90 px-1.5 py-0.5 rounded font-mono ml-1">
+                        {announcementConfig.discountCode}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span>
+                    Members: Complimentary Worldwide Dispatch on orders {
+                      currency === 'GBP' ? '£120+' : currency === 'EUR' ? '€140+' : '$150+'
+                    } • 30-Day Risk-Free Returns.
+                  </span>
+                )}{' '}
+                <button onClick={() => openAuthModal('signin')} className="underline font-bold hover:text-black cursor-pointer ml-1">
+                  {announcementConfig.linkText || 'Join or Sign In'}
+                </button>
+              </p>
+            )}
+          </div>
+          <button
+            id="dismiss-announcement-btn"
+            onClick={handleDismissAnnouncement}
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 p-1 text-neutral-500 hover:text-black rounded-full hover:bg-neutral-200/80 transition-colors cursor-pointer"
+            title="Dismiss notification"
+            aria-label="Dismiss announcement"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
 
       {/* 4. MOBILE DRAWER */}

@@ -7,7 +7,7 @@ import { ArrowRight, Shield, Compass, Sparkles, Camera } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const { goToShop, goToProduct, goToLookbook } = useNavigation();
-  const { products } = useStore();
+  const { products, heroConfig } = useStore();
 
   // 4-column New Arrivals (Nike layout)
   const newArrivals = products.filter((p) => p.newArrival).slice(0, 4);
@@ -16,33 +16,38 @@ export const HomePage: React.FC = () => {
   return (
     <div className="w-full bg-white">
       
-      {/* 1. MONUMENTAL NIKE-INSPIRED HERO SECTION */}
+      {/* 1. MONUMENTAL NIKE-INSPIRED HERO SECTION (DYNAMICALLY MANAGED FROM ADMIN) */}
       <section className="relative w-full min-h-[92vh] flex flex-col justify-between overflow-hidden bg-black text-white">
         
         {/* Background Editorial Streetwear Image with Vignette Scrim */}
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=2400&q=85"
-            alt="RAYLUX Streetwear Cap Model Editorial"
-            className="w-full h-full object-cover object-[center_28%] filter contrast-[1.12] brightness-[0.82]"
+            src={heroConfig.imageUrl || "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=2400&q=85"}
+            alt="RAYLUX Hero Banner Editorial"
+            className="w-full h-full object-cover object-[center_28%] filter contrast-[1.12] brightness-[0.82] transition-all duration-700"
           />
           {/* Subtle Nike-style contrast vignette */}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-black/20"></div>
         </div>
 
-        {/* Top Floating Badge */}
+        {/* Top Floating Badge & Caption */}
         <div className="relative z-10 p-6 sm:p-10 max-w-7xl mx-auto w-full flex justify-between items-start">
-          <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/20 px-3.5 py-1.5 rounded-full text-white">
-            <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-            <span className="font-sans text-xs font-bold uppercase tracking-wider">
-              NEW RELEASE // MONOLITH SERIES 2026
-            </span>
-          </div>
-          <div className="hidden sm:block font-sans text-xs text-white/80 font-medium tracking-wide text-right">
-            ARCHITECTURAL TECHNICAL HEADWEAR
-            <br />
-            <strong className="text-white">DESIGNED FOR UNCOMPROMISED PRECISION</strong>
-          </div>
+          {heroConfig.badgeActive ? (
+            <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/20 px-3.5 py-1.5 rounded-full text-white">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+              <span className="font-sans text-xs font-bold uppercase tracking-wider">
+                {heroConfig.badgeText}
+              </span>
+            </div>
+          ) : <div />}
+
+          {(heroConfig.topRightCaptionLine1 || heroConfig.topRightCaptionLine2) && (
+            <div className="hidden sm:block font-sans text-xs text-white/80 font-medium tracking-wide text-right">
+              {heroConfig.topRightCaptionLine1}
+              <br />
+              <strong className="text-white">{heroConfig.topRightCaptionLine2}</strong>
+            </div>
+          )}
         </div>
 
         {/* Bottom: Nike Monumental Typography & Directives */}
@@ -50,11 +55,13 @@ export const HomePage: React.FC = () => {
           
           {/* Giant Nike-Style Display Title */}
           <div className="overflow-hidden select-none mb-3">
-            <span className="font-sans text-xs sm:text-sm font-extrabold uppercase tracking-widest text-white/80 block mb-2">
-              RAYLUX TECHNICAL HEADWEAR LAB
-            </span>
+            {heroConfig.superTitle && (
+              <span className="font-sans text-xs sm:text-sm font-extrabold uppercase tracking-widest text-white/80 block mb-2">
+                {heroConfig.superTitle}
+              </span>
+            )}
             <h1 className="font-nike text-6xl sm:text-8xl lg:text-[11rem] font-black uppercase tracking-tighter leading-[0.86] text-white">
-              ENGINEERED TO LEAD
+              {heroConfig.mainTitle || 'ENGINEERED TO LEAD'}
             </h1>
           </div>
 
@@ -62,27 +69,29 @@ export const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end pt-4 border-t border-white/20">
             <div className="lg:col-span-8 space-y-2">
               <p className="font-sans text-base sm:text-xl text-white/95 max-w-2xl font-normal leading-relaxed">
-                Series 01 Architectural Headwear. Bonded waterproof seams, genuine GORE-TEX 3L membranes, and high-density 340 GSM twills designed with relentless discipline.
+                {heroConfig.description}
               </p>
             </div>
 
             {/* Nike Pill Action Buttons */}
             <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3">
               <button
-                onClick={() => goToShop()}
-                className="w-full py-4 px-8 bg-white text-black font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 group shadow-xl"
+                onClick={() => heroConfig.primaryBtnAction === 'lookbook' ? goToLookbook() : goToShop()}
+                className="w-full py-4 px-8 bg-white text-black font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 group shadow-xl cursor-pointer"
               >
-                <span>SHOP THE COLLECTION</span>
+                <span>{heroConfig.primaryBtnText || 'SHOP THE COLLECTION'}</span>
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
 
-              <button
-                onClick={goToLookbook}
-                className="w-full py-4 px-8 bg-transparent border border-white text-white font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2"
-              >
-                <Camera size={16} />
-                <span>VIEW 2026 LOOKBOOK</span>
-              </button>
+              {heroConfig.secondaryBtnActive && (
+                <button
+                  onClick={() => heroConfig.secondaryBtnAction === 'shop' ? goToShop() : goToLookbook()}
+                  className="w-full py-4 px-8 bg-transparent border border-white text-white font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Camera size={16} />
+                  <span>{heroConfig.secondaryBtnText || 'VIEW 2026 LOOKBOOK'}</span>
+                </button>
+              )}
             </div>
           </div>
 

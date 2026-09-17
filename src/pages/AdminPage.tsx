@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigation, AdminTab } from '../context/NavigationContext';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
-import { Order, InventoryItem } from '../types/product';
+import { Order, InventoryItem, User } from '../types/product';
 import { ProductModal, ProductModalPayload } from '../components/admin/ProductModal';
+import { CustomerModal, CustomerModalPayload } from '../components/admin/CustomerModal';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -23,7 +24,6 @@ import {
   CheckCircle2,
   Clock,
   DollarSign,
-  TrendingUp,
   Menu,
   Bot,
   LifeBuoy,
@@ -35,6 +35,11 @@ import {
   Edit3,
   AlertTriangle,
   Sparkles,
+  Sliders,
+  RotateCcw,
+  UserPlus,
+  Phone,
+  MapPin,
 } from 'lucide-react';
 import { useTickets } from '../context/TicketContext';
 import { useCurrency } from '../context/CurrencyContext';
@@ -56,6 +61,14 @@ const DEFAULT_PROMO_CODES: PromoCodeItem[] = [
   { code: 'VIP25', percent: 25, active: false, uses: 9, expiry: '2026-08-30' },
 ];
 
+const PRESET_HERO_IMAGES = [
+  { label: 'Streetwear Model', url: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Studio Minimalist', url: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'GORE-TEX Mountain', url: 'https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Urban Dark Architecture', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Tokyo Monolith Night', url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=2400&q=85' },
+];
+
 export const AdminPage: React.FC = () => {
   const { isAdminLoggedIn, loginAdmin, logoutAdmin, goToHome, adminTab, setAdminTab } = useNavigation();
   const {
@@ -67,8 +80,19 @@ export const AdminPage: React.FC = () => {
     updateProduct,
     restockProduct,
     deleteProduct,
+    heroConfig,
+    updateHeroConfig,
+    resetHeroConfig,
+    announcementConfig,
+    updateAnnouncementConfig,
   } = useStore();
-  const { registeredUsers } = useAuth();
+  const {
+    registeredUsers,
+    addCustomer,
+    updateCustomer,
+    deleteCustomer,
+    setCustomerStatus,
+  } = useAuth();
 
   // Active Admin Tab & Mobile Sidebar
   const activeTab: AdminTab = adminTab || 'overview';
@@ -87,13 +111,29 @@ export const AdminPage: React.FC = () => {
   const [globalSearch, setGlobalSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PROCESSING' | 'IN TRANSIT' | 'DELIVERED'>('ALL');
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState<string>('ALL');
-  const [customerFilter, setCustomerFilter] = useState<'ALL' | 'GOOGLE' | 'EMAIL'>('ALL');
+  const [customerFilter, setCustomerFilter] = useState<'ALL' | 'VIP' | 'ACTIVE' | 'SUSPENDED'>('ALL');
 
   // Modals & Drawers
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<(InventoryItem & { description?: string; profile?: string; images?: string[] }) | null>(null);
+  
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<User | null>(null);
+
   const [selectedInspectOrder, setSelectedInspectOrder] = useState<Order | null>(null);
-  const [inspectCustomer, setInspectCustomer] = useState<(typeof registeredUsers)[0] | null>(null);
+  const [inspectCustomer, setInspectCustomer] = useState<User | null>(null);
+
+  // Hero CMS Editing State
+  const [editHero, setEditHero] = useState(heroConfig);
+  const [editAnnouncement, setEditAnnouncement] = useState(announcementConfig);
+
+  useEffect(() => {
+    setEditHero(heroConfig);
+  }, [heroConfig]);
+
+  useEffect(() => {
+    setEditAnnouncement(announcementConfig);
+  }, [announcementConfig]);
 
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
@@ -109,6 +149,16 @@ export const AdminPage: React.FC = () => {
       images: matchingProd?.images,
     });
     setIsProductModalOpen(true);
+  };
+
+  const handleOpenAddCustomer = () => {
+    setEditingCustomer(null);
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleEditCustomer = (cust: User) => {
+    setEditingCustomer(cust);
+    setIsCustomerModalOpen(true);
   };
 
   // Helper to fetch image for an inventory item
@@ -264,16 +314,18 @@ export const AdminPage: React.FC = () => {
     });
   }, [inventory, inventoryCategoryFilter, globalSearch]);
 
-  // Filtered Customers
+  // Filtered Customers (CRM)
   const filteredCustomers = useMemo(() => {
     return registeredUsers.filter((cust) => {
-      if (customerFilter === 'GOOGLE' && cust.provider !== 'google') return false;
-      if (customerFilter === 'EMAIL' && cust.provider !== 'email') return false;
+      if (customerFilter === 'VIP' && cust.status !== 'VIP') return false;
+      if (customerFilter === 'ACTIVE' && cust.status !== 'ACTIVE') return false;
+      if (customerFilter === 'SUSPENDED' && cust.status !== 'SUSPENDED') return false;
       if (globalSearch.trim()) {
         const q = globalSearch.toLowerCase();
         const matchName = cust.name.toLowerCase().includes(q);
         const matchEmail = cust.email.toLowerCase().includes(q);
-        if (!matchName && !matchEmail) return false;
+        const matchPhone = cust.phone?.toLowerCase().includes(q);
+        if (!matchName && !matchEmail && !matchPhone) return false;
       }
       return true;
     });
@@ -296,7 +348,7 @@ export const AdminPage: React.FC = () => {
     e.preventDefault();
     const success = loginAdmin(password);
     if (!success) {
-      setErrorMsg('Invalid password. Use "raylux2026" or "admin".');
+      setErrorMsg('Invalid passcode. Use "raylux2026" or "admin".');
     } else {
       setErrorMsg('');
     }
@@ -325,7 +377,7 @@ export const AdminPage: React.FC = () => {
       ...prev
     ]);
     setNewPromoCode('');
-    showNotice(`Promo code ${codeClean} created successfully!`);
+    showNotice(`Promo code ${codeClean} created!`);
   };
 
   const handleTogglePromoCode = (code: string) => {
@@ -352,7 +404,7 @@ export const AdminPage: React.FC = () => {
         images: data.images,
         description: data.description,
       });
-      showNotice(`Product ${data.sku} updated successfully!`);
+      showNotice(`Product ${data.sku} updated!`);
     } else {
       addProduct({
         name: data.name,
@@ -367,9 +419,56 @@ export const AdminPage: React.FC = () => {
         profile: data.profile,
         description: data.description,
       });
-      showNotice(`New product ${data.name} added to catalog!`);
+      showNotice(`New product ${data.name} added!`);
     }
     setIsProductModalOpen(false);
+  };
+
+  const handleSaveCustomerModal = (data: CustomerModalPayload) => {
+    if (editingCustomer) {
+      updateCustomer(editingCustomer.id, {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        status: data.status,
+        sizePreference: data.sizePreference,
+        address: data.address,
+        notes: data.notes,
+        provider: data.provider,
+      });
+      showNotice(`Client record ${data.name} updated!`);
+    } else {
+      addCustomer({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        status: data.status,
+        sizePreference: data.sizePreference,
+        address: data.address,
+        notes: data.notes,
+        provider: data.provider,
+        role: 'customer',
+        joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        totalOrders: 0,
+        totalSpent: 0,
+      });
+      showNotice(`New client ${data.name} registered!`);
+    }
+    setIsCustomerModalOpen(false);
+  };
+
+  const handleSaveHeroBanner = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateHeroConfig(editHero);
+    updateAnnouncementConfig(editAnnouncement);
+    showNotice('Storefront Hero Banner and Announcement updated live!');
+  };
+
+  const handleResetHeroBanner = () => {
+    if (confirm('Reset Storefront Hero Banner to factory defaults?')) {
+      resetHeroConfig();
+      showNotice('Hero banner reset to defaults.');
+    }
   };
 
   const handleTestAiQuery = async (e: React.FormEvent) => {
@@ -391,7 +490,7 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveAiConfig = () => {
     saveAIAgentConfig(aiConfig);
-    showNotice('AI Agent parameters saved successfully!');
+    showNotice('AI Agent parameters saved!');
   };
 
   const handleSaveExchangeRate = (e: React.FormEvent) => {
@@ -400,7 +499,7 @@ export const AdminPage: React.FC = () => {
     const parsedEur = parseFloat(editEurRate);
     if (!isNaN(parsedGbp) && parsedGbp > 0 && !isNaN(parsedEur) && parsedEur > 0) {
       setExchangeRates({ GBP: parsedGbp, EUR: parsedEur });
-      showNotice(`Exchange rates updated: 1 USD = £${parsedGbp} GBP • €${parsedEur} EUR!`);
+      showNotice(`Exchange rates set: 1 USD = £${parsedGbp} GBP • €${parsedEur} EUR!`);
     } else {
       alert('Please enter valid positive numbers for both GBP and EUR exchange rates.');
     }
@@ -411,63 +510,57 @@ export const AdminPage: React.FC = () => {
     if (!selectedTicket || !adminReplyText.trim()) return;
     addReply(selectedTicket.id, adminReplyText.trim(), 'admin', 'Marcus Vance (Raylux Support)');
     setAdminReplyText('');
-    showNotice('Response sent to customer ticket!');
+    showNotice('Response sent to customer!');
   };
 
   // ==========================================
-  // VIEW 1: AUTHENTICATION LOGIN PORTAL
+  // VIEW 1: AUTHENTICATION LOGIN PORTAL (NIKE MONOCHROME)
   // ==========================================
   if (!isAdminLoggedIn) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 text-slate-800 font-sans selection:bg-slate-900 selection:text-white relative overflow-hidden">
-        {/* Subtle decorative background circles */}
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-slate-200/40 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-blue-100/40 blur-3xl pointer-events-none" />
-
-        <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 shadow-xl p-8 sm:p-10 relative z-10 animate-fadeIn">
+      <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-4 sm:p-6 text-neutral-900 font-sans selection:bg-black selection:text-white">
+        <div className="w-full max-w-md bg-white border border-neutral-200 p-8 sm:p-10 shadow-xl rounded-2xl relative">
           
-          {/* Logo & Header */}
-          <div className="text-center space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white mx-auto flex items-center justify-center shadow-lg shadow-slate-900/10">
-              <span className="font-serif text-2xl font-black italic tracking-tighter">R</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Raylux Admin Portal</h1>
-              <p className="text-xs text-slate-500 mt-1">Sign in to manage catalog, orders, and store operations.</p>
-            </div>
+          {/* Brand Header */}
+          <div className="text-center space-y-2 mb-6">
+            <span className="font-nike text-3xl font-black tracking-tighter uppercase block text-black">
+              RAYLUX
+            </span>
+            <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block">
+              OPERATIONS & STOREFRONT CMS
+            </span>
+            <p className="text-xs text-neutral-500">Sign in to manage catalog, hero banner, orders, and clients.</p>
           </div>
 
           {/* Quick Demo Login Pill */}
-          <div className="mt-6 p-3.5 bg-slate-50 border border-slate-200/70 rounded-2xl flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-slate-200/80 flex items-center justify-center text-slate-600">
-                <KeyRound size={14} />
-              </div>
+          <div className="mb-5 p-3 bg-neutral-50 border border-neutral-200 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <KeyRound size={14} className="text-neutral-500" />
               <div>
-                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Demo Passcode</span>
-                <span className="text-xs font-mono font-bold text-slate-800">raylux2026</span>
+                <span className="text-[9px] uppercase font-bold text-neutral-400 block tracking-wider">Demo Key</span>
+                <span className="text-xs font-mono font-bold text-black">raylux2026</span>
               </div>
             </div>
             <button
               type="button"
               onClick={handleQuickDemoFill}
-              className="px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-900 rounded-xl text-xs font-semibold shadow-xs hover:bg-slate-50 transition-all cursor-pointer"
+              className="px-3 py-1.5 bg-black text-white rounded-full text-xs font-bold hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               Quick Login
             </button>
           </div>
 
           {errorMsg && (
-            <div className="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-              <AlertTriangle size={14} className="shrink-0" />
+            <div className="mb-4 p-3 rounded-xl bg-neutral-100 border border-neutral-300 text-neutral-800 text-xs font-medium flex items-center gap-2">
+              <AlertTriangle size={14} className="text-black shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
                 Admin Email
               </label>
               <input
@@ -475,12 +568,12 @@ export const AdminPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
+                className="w-full bg-white border border-neutral-300 rounded-xl px-4 py-2.5 text-xs text-black focus:outline-none focus:border-black font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
                 Passcode
               </label>
               <div className="relative">
@@ -490,12 +583,12 @@ export const AdminPage: React.FC = () => {
                   placeholder="Enter passcode..."
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-10 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
+                  className="w-full bg-white border border-neutral-300 rounded-xl pl-4 pr-10 py-2.5 text-xs text-black focus:outline-none focus:border-black font-medium"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-2.5 text-neutral-400 hover:text-black transition-colors"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -504,20 +597,20 @@ export const AdminPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full mt-2 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="w-full mt-2 py-3 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md"
             >
               Sign In to Console
             </button>
           </form>
 
           {/* Return link */}
-          <div className="mt-6 text-center pt-5 border-t border-slate-100">
+          <div className="mt-6 text-center pt-4 border-t border-neutral-100">
             <button
               type="button"
               onClick={goToHome}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-900 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="text-xs font-bold text-neutral-500 hover:text-black transition-colors cursor-pointer"
             >
-              <span>← Return to Customer Storefront</span>
+              ← Return to Customer Storefront
             </button>
           </div>
 
@@ -527,73 +620,66 @@ export const AdminPage: React.FC = () => {
   }
 
   // ==========================================
-  // VIEW 2: LOGGED-IN ADMIN CONSOLE WORKSPACE
+  // VIEW 2: LOGGED-IN NIKE ADMIN CONSOLE
   // ==========================================
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-slate-900 selection:text-white antialiased">
+    <div className="min-h-screen bg-white flex flex-col lg:flex-row text-neutral-900 font-sans selection:bg-black selection:text-white antialiased">
       
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-medium animate-fadeIn border border-slate-800">
-          <CheckCircle2 size={16} className="text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 bg-black text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-xs font-bold animate-fadeIn border border-neutral-800">
+          <CheckCircle2 size={16} className="text-white" />
           <span>{notification}</span>
         </div>
       )}
 
-      {/* MOBILE TOP BAR (Hidden on Desktop) */}
-      <div className="lg:hidden bg-white border-b border-slate-200/80 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      {/* MOBILE TOP BAR */}
+      <div className="lg:hidden bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsMobileSidebarOpen(true)}
-            className="p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
+            className="p-2 text-neutral-800 hover:text-black rounded-lg hover:bg-neutral-100 transition-colors"
             title="Open Menu"
           >
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-serif text-sm font-bold italic">
-              R
-            </div>
-            <span className="font-bold text-sm text-slate-900">Raylux Admin</span>
+            <span className="font-nike text-lg font-black tracking-tight uppercase">RAYLUX</span>
+            <span className="text-[10px] font-bold text-neutral-400 uppercase">ADMIN</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={goToHome}
-            className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1"
+            className="px-3 py-1.5 rounded-full border border-neutral-300 text-black hover:bg-neutral-50 text-xs font-bold flex items-center gap-1"
           >
             <span>Store</span>
             <ExternalLink size={12} />
           </button>
-          <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-semibold">
+          <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold">
             MV
           </div>
         </div>
       </div>
 
-      {/* MOBILE DRAWER OVERLAY */}
+      {/* MOBILE DRAWER */}
       {isMobileSidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
           <aside className="relative w-72 bg-white h-full shadow-2xl flex flex-col justify-between p-5 z-10">
             <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-serif font-bold italic text-sm">
-                    R
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-sm text-slate-900">Raylux Store</h2>
-                    <span className="text-[10px] font-semibold text-emerald-600">● Console Online</span>
-                  </div>
+              <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
+                <div>
+                  <span className="font-nike text-xl font-black uppercase tracking-tight">RAYLUX LAB</span>
+                  <span className="text-[10px] font-bold text-neutral-400 block tracking-widest uppercase">Admin Workspace</span>
                 </div>
                 <button
                   onClick={() => setIsMobileSidebarOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+                  className="p-1.5 text-neutral-400 hover:text-black rounded-lg"
                 >
                   <X size={18} />
                 </button>
@@ -601,139 +687,57 @@ export const AdminPage: React.FC = () => {
 
               {/* Mobile Navigation List */}
               <nav className="mt-5 space-y-1">
-                <span className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Main Menu</span>
+                <span className="px-3 text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-2">Workspace</span>
                 
-                <button
-                  onClick={() => { setActiveTab('overview'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'overview' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <LayoutDashboard size={16} />
-                    <span>Overview</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab('orders'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'orders' || activeTab === 'dispatches' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <ShoppingBag size={16} />
-                    <span>Orders</span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    activeTab === 'orders' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {orders.length}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab('inventory'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'inventory' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Package size={16} />
-                    <span>Products & Stock</span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    activeTab === 'inventory' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {inventory.length}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab('customers'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'customers' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Users size={16} />
-                    <span>Customers</span>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    activeTab === 'customers' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {registeredUsers.length}
-                  </span>
-                </button>
-
-                <span className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-4 mb-2">Store Ops</span>
-
-                <button
-                  onClick={() => { setActiveTab('discounts'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'discounts' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Tag size={16} />
-                    <span>Promo Codes</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab('support'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'support' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <LifeBuoy size={16} />
-                    <span>Support Desk</span>
-                  </div>
-                  {openTicketsCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                      {openTicketsCount}
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab('ai_agent'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'ai_agent' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Bot size={16} />
-                    <span>AI Assistant</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab('settings'); setIsMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === 'settings' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Settings size={16} />
-                    <span>Store Settings</span>
-                  </div>
-                </button>
+                {[
+                  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+                  { id: 'orders', label: 'Orders', icon: ShoppingBag, count: orders.length },
+                  { id: 'inventory', label: 'Products & Stock', icon: Package, count: inventory.length },
+                  { id: 'hero_cms', label: 'Hero & Storefront CMS', icon: Sliders },
+                  { id: 'customers', label: 'Client Directory (CRM)', icon: Users, count: registeredUsers.length },
+                  { id: 'discounts', label: 'Promo Vouchers', icon: Tag },
+                  { id: 'support', label: 'Support Concierge', icon: LifeBuoy, count: openTicketsCount },
+                  { id: 'ai_agent', label: 'AI Intelligence', icon: Bot },
+                  { id: 'settings', label: 'Store Settings', icon: Settings },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => { setActiveTab(item.id as AdminTab); setIsMobileSidebarOpen(false); }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                        isActive ? 'bg-black text-white' : 'text-neutral-700 hover:bg-neutral-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon size={16} />
+                        <span>{item.label}</span>
+                      </div>
+                      {Boolean(item.count) && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          isActive ? 'bg-white text-black' : 'bg-neutral-100 text-neutral-700'
+                        }`}>
+                          {item.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 space-y-2">
+            <div className="pt-4 border-t border-neutral-200 space-y-2">
               <button
                 onClick={goToHome}
-                className="w-full py-2.5 px-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-3 rounded-full border border-neutral-300 text-black hover:bg-neutral-50 text-xs font-bold flex items-center justify-center gap-2"
               >
                 <ExternalLink size={14} />
                 <span>Customer Storefront</span>
               </button>
               <button
                 onClick={logoutAdmin}
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold flex items-center justify-center gap-2"
               >
                 <LogOut size={14} />
                 <span>Log Out</span>
@@ -743,179 +747,113 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* DESKTOP PERMANENT SIDEBAR */}
-      <aside className="hidden lg:flex flex-col justify-between w-64 bg-white border-r border-slate-200/80 p-5 sticky top-0 h-screen z-20 shrink-0">
+      {/* DESKTOP PERMANENT SIDEBAR (NIKE MONOCHROME) */}
+      <aside className="hidden lg:flex flex-col justify-between w-64 bg-[#fcfcfc] border-r border-neutral-200 p-5 sticky top-0 h-screen z-20 shrink-0">
         <div className="space-y-6">
           {/* Logo & Branding */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-serif text-lg font-bold italic shadow-sm">
-                R
-              </div>
-              <div>
-                <h2 className="font-bold text-sm text-slate-900 leading-tight">Raylux Store</h2>
-                <p className="text-[11px] text-slate-400 font-medium">Admin Workspace</p>
-              </div>
+          <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
+            <div>
+              <span className="font-nike text-2xl font-black text-black tracking-tighter uppercase block">
+                RAYLUX
+              </span>
+              <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block">
+                FLAGSHIP OPERATIONS
+              </span>
             </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-100" title="Store Active" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-100" title="Store Live" />
           </div>
 
           {/* Navigation Links */}
           <nav className="space-y-1">
-            <span className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Main Menu</span>
+            <span className="px-3 text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-2">Dashboard</span>
 
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'overview'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <LayoutDashboard size={16} />
-                <span>Overview</span>
-              </div>
-            </button>
+            {[
+              { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+              { id: 'orders', label: 'Orders & Dispatch', icon: ShoppingBag, count: orders.length },
+              { id: 'inventory', label: 'Products & Stock', icon: Package, count: inventory.length },
+              { id: 'hero_cms', label: 'Hero & Store CMS', icon: Sliders },
+              { id: 'customers', label: 'Customer CRM', icon: Users, count: registeredUsers.length },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as AdminTab)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-black text-white shadow-sm'
+                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-black'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} />
+                    <span>{item.label}</span>
+                  </div>
+                  {Boolean(item.count) && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-white text-black' : 'bg-neutral-200/70 text-neutral-700'
+                    }`}>
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
 
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'orders' || activeTab === 'dispatches'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <ShoppingBag size={16} />
-                <span>Orders</span>
-              </div>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                activeTab === 'orders' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-              }`}>
-                {orders.length}
-              </span>
-            </button>
+            <span className="px-3 text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mt-5 mb-2">Commerce Ops</span>
 
-            <button
-              onClick={() => setActiveTab('inventory')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'inventory'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Package size={16} />
-                <span>Products & Stock</span>
-              </div>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                activeTab === 'inventory' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-              }`}>
-                {inventory.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('customers')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'customers'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Users size={16} />
-                <span>Customers</span>
-              </div>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                activeTab === 'customers' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-              }`}>
-                {registeredUsers.length}
-              </span>
-            </button>
-
-            <span className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-5 mb-2">Store Ops</span>
-
-            <button
-              onClick={() => setActiveTab('discounts')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'discounts'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Tag size={16} />
-                <span>Promo Codes</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('support')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'support'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <LifeBuoy size={16} />
-                <span>Support Desk</span>
-              </div>
-              {openTicketsCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                  {openTicketsCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('ai_agent')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'ai_agent'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Bot size={16} />
-                <span>AI Assistant</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Settings size={16} />
-                <span>Store Settings</span>
-              </div>
-            </button>
+            {[
+              { id: 'discounts', label: 'Promo Vouchers', icon: Tag },
+              { id: 'support', label: 'Support Concierge', icon: LifeBuoy, count: openTicketsCount },
+              { id: 'ai_agent', label: 'AI Intelligence', icon: Bot },
+              { id: 'settings', label: 'Store Settings', icon: Settings },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as AdminTab)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-black text-white shadow-sm'
+                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-black'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} />
+                    <span>{item.label}</span>
+                  </div>
+                  {Boolean(item.count) && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-white text-black' : 'bg-neutral-200/70 text-neutral-700'
+                    }`}>
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
         {/* User Card & Foot Actions */}
-        <div className="space-y-3 pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50/70 border border-slate-100">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-bold">
+        <div className="space-y-3 pt-4 border-t border-neutral-200">
+          <div className="flex items-center gap-3 p-2 rounded-xl bg-white border border-neutral-200">
+            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold">
               MV
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-slate-900 truncate">Marcus Vance</p>
-              <p className="text-[10px] text-slate-400 truncate">admin@raylux.com</p>
+              <p className="text-xs font-bold text-black truncate">Marcus Vance</p>
+              <p className="text-[10px] text-neutral-400 truncate">Store Administrator</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={goToHome}
-              className="py-2 px-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="py-2 px-2.5 rounded-full border border-neutral-300 text-black hover:bg-neutral-100 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               title="Return to Storefront"
             >
               <ExternalLink size={13} />
@@ -923,7 +861,7 @@ export const AdminPage: React.FC = () => {
             </button>
             <button
               onClick={logoutAdmin}
-              className="py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="py-2 px-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               title="Sign Out"
             >
               <LogOut size={13} />
@@ -934,19 +872,19 @@ export const AdminPage: React.FC = () => {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
         
         {/* DESKTOP TOP BAR */}
-        <header className="hidden lg:flex h-16 bg-white border-b border-slate-200/80 px-8 items-center justify-between sticky top-0 z-10 shadow-xs">
+        <header className="hidden lg:flex h-16 bg-white border-b border-neutral-200 px-8 items-center justify-between sticky top-0 z-10">
           {/* Breadcrumb & Clock */}
           <div className="flex items-center gap-4">
-            <div className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+            <div className="text-xs font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5">
               <span>Raylux</span>
               <span>/</span>
-              <span className="text-slate-800 font-semibold capitalize">{activeTab}</span>
+              <span className="text-black">{activeTab.replace('_', ' ')}</span>
             </div>
-            <div className="h-4 w-px bg-slate-200" />
-            <div className="flex items-center gap-1.5 text-xs font-mono text-slate-400">
+            <div className="h-4 w-px bg-neutral-200" />
+            <div className="flex items-center gap-1.5 text-xs font-mono text-neutral-400">
               <Clock size={13} />
               <span>{currentTime}</span>
             </div>
@@ -956,30 +894,30 @@ export const AdminPage: React.FC = () => {
           <div className="flex items-center gap-3">
             {/* Search Input */}
             <div className="relative w-64">
-              <Search size={14} className="absolute left-3.5 top-3 text-slate-400" />
+              <Search size={14} className="absolute left-3.5 top-3 text-neutral-400" />
               <input
                 type="text"
                 placeholder="Search orders, products, clients..."
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-black placeholder-neutral-400 focus:bg-white focus:outline-none focus:border-black font-medium"
               />
             </div>
 
             {/* Live Currency Pill */}
             <button
               onClick={() => setActiveTab('settings')}
-              className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-200 hover:border-neutral-400 text-neutral-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Adjust Currency Exchange Rates"
             >
-              <Coins size={13} className="text-slate-500" />
+              <Coins size={13} className="text-neutral-500" />
               <span>£{exchangeRates.GBP} GBP • €{exchangeRates.EUR} EUR</span>
             </button>
 
             {/* Quick Add Product Button */}
             <button
               onClick={handleOpenAddProduct}
-              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Plus size={14} />
               <span>Add Product</span>
@@ -988,7 +926,7 @@ export const AdminPage: React.FC = () => {
             {/* View Storefront Button */}
             <button
               onClick={goToHome}
-              className="px-3 py-1.5 border border-slate-200 hover:border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 border border-neutral-300 hover:border-black rounded-full text-black hover:bg-neutral-50 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>Storefront</span>
               <ExternalLink size={12} />
@@ -1006,108 +944,98 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-4 border-b border-neutral-200">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Overview Dashboard</h1>
-                  <p className="text-xs text-slate-500 mt-1">Real-time performance metrics, orders activity, and inventory health.</p>
+                  <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                    EXECUTIVE TELEMETRY
+                  </span>
+                  <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">Overview Dashboard</h1>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => setActiveTab('hero_cms')}
+                    className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-black rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sliders size={14} />
+                    <span>Edit Hero Banner</span>
+                  </button>
+                  <button
                     onClick={handleOpenAddProduct}
-                    className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
                   >
                     <Plus size={14} />
                     <span>New Product</span>
                   </button>
-                  <button
-                    onClick={() => setActiveTab('orders')}
-                    className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 shadow-xs flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <ShoppingBag size={14} />
-                    <span>View Orders</span>
-                  </button>
                 </div>
               </div>
 
-              {/* 4 Fresh Clean KPI Cards */}
+              {/* 4 Clean Nike Metric Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {/* Metric 1: Revenue */}
-                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-xs hover:shadow-sm transition-all space-y-3">
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500">Gross Revenue</span>
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                      <DollarSign size={16} />
-                    </div>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Gross Revenue</span>
+                    <span className="p-1.5 rounded-full bg-neutral-100 text-black">
+                      <DollarSign size={14} />
+                    </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">
+                    <h3 className="font-nike text-3xl font-black text-black tracking-tight">
                       ${grossRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </h3>
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                        <TrendingUp size={11} />
-                        <span>+14.8%</span>
-                      </span>
-                      <span className="text-[11px] text-slate-400">vs last month</span>
-                    </div>
+                    <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-neutral-500">
+                      <span className="text-black">↑ 14.8%</span>
+                      <span>vs previous month</span>
+                    </p>
                   </div>
                 </div>
 
                 {/* Metric 2: Orders */}
-                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-xs hover:shadow-sm transition-all space-y-3">
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500">Total Orders</span>
-                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                      <ShoppingBag size={16} />
-                    </div>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Total Orders</span>
+                    <span className="p-1.5 rounded-full bg-neutral-100 text-black">
+                      <ShoppingBag size={14} />
+                    </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{orders.length} Dispatches</h3>
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="inline-flex items-center text-[11px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md">
-                        {activeDispatchesCount} in transit
-                      </span>
-                      <span className="text-[11px] text-slate-400">active now</span>
-                    </div>
+                    <h3 className="font-nike text-3xl font-black text-black tracking-tight">{orders.length} Dispatches</h3>
+                    <p className="mt-1 text-[11px] font-bold text-neutral-500">
+                      {activeDispatchesCount} active in transit
+                    </p>
                   </div>
                 </div>
 
                 {/* Metric 3: Units Sold */}
-                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-xs hover:shadow-sm transition-all space-y-3">
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500">Catalog Units</span>
-                    <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                      <Package size={16} />
-                    </div>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Depot Units</span>
+                    <span className="p-1.5 rounded-full bg-neutral-100 text-black">
+                      <Package size={14} />
+                    </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{totalDepotUnits} in Stock</h3>
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="inline-flex items-center text-[11px] font-medium text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md">
-                        {inventory.length} active SKUs
-                      </span>
-                      <span className="text-[11px] text-slate-400">across store</span>
-                    </div>
+                    <h3 className="font-nike text-3xl font-black text-black tracking-tight">{totalDepotUnits} in Stock</h3>
+                    <p className="mt-1 text-[11px] font-bold text-neutral-500">
+                      {inventory.length} active SKUs
+                    </p>
                   </div>
                 </div>
 
                 {/* Metric 4: Registered Members */}
-                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-xs hover:shadow-sm transition-all space-y-3">
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500">Customers</span>
-                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                      <Users size={16} />
-                    </div>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Customer Roster</span>
+                    <span className="p-1.5 rounded-full bg-neutral-100 text-black">
+                      <Users size={14} />
+                    </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{registeredUsers.length} Members</h3>
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="inline-flex items-center text-[11px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md">
-                        2 Google verified
-                      </span>
-                      <span className="text-[11px] text-slate-400">accounts</span>
-                    </div>
+                    <h3 className="font-nike text-3xl font-black text-black tracking-tight">{registeredUsers.length} Clients</h3>
+                    <p className="mt-1 text-[11px] font-bold text-neutral-500">
+                      {registeredUsers.filter(u => u.status === 'VIP').length} VIP members
+                    </p>
                   </div>
                 </div>
 
@@ -1117,19 +1045,19 @@ export const AdminPage: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Sales Volume Activity (2 cols) */}
-                <div className="lg:col-span-2 bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-5">
+                <div className="lg:col-span-2 bg-white border border-neutral-200 p-6 rounded-2xl space-y-5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Weekly Revenue Velocity</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">Processed orders volume across global fulfillment hubs</p>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-black">Weekly Revenue Velocity</h3>
+                      <p className="text-xs text-neutral-400 mt-0.5">Processed orders volume across global fulfillment hubs</p>
                     </div>
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700">
+                    <span className="px-3 py-1 rounded-full bg-neutral-100 text-xs font-bold text-black">
                       Avg $12,125 / day
                     </span>
                   </div>
 
-                  {/* Clean SVG/CSS Bar Graph */}
-                  <div className="pt-4 flex items-end justify-between gap-3 h-48 border-b border-slate-100 pb-3">
+                  {/* Clean Bar Graph */}
+                  <div className="pt-4 flex items-end justify-between gap-3 h-48 border-b border-neutral-200 pb-3">
                     {[
                       { day: 'Mon', h: '60%', val: '$11.2k' },
                       { day: 'Tue', h: '80%', val: '$14.8k' },
@@ -1140,29 +1068,29 @@ export const AdminPage: React.FC = () => {
                       { day: 'Sun', h: '68%', val: '$12.4k' },
                     ].map((bar) => (
                       <div key={bar.day} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                        <span className="text-[10px] text-slate-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] text-neutral-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                           {bar.val}
                         </span>
                         <div
                           style={{ height: bar.h }}
-                          className="w-full max-w-[36px] bg-slate-900 hover:bg-slate-800 rounded-t-lg transition-all"
+                          className="w-full max-w-[34px] bg-black hover:bg-neutral-800 rounded-t transition-all"
                         />
-                        <span className="text-xs font-semibold text-slate-500">{bar.day}</span>
+                        <span className="text-xs font-bold text-neutral-500 uppercase">{bar.day}</span>
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-slate-400">
+                  <div className="flex items-center justify-between text-xs text-neutral-400">
                     <span>* 100% Real-time database sync</span>
-                    <span className="text-emerald-600 font-medium">99.8% On-time dispatch</span>
+                    <span className="text-black font-bold">99.8% On-time dispatch</span>
                   </div>
                 </div>
 
-                {/* Top Silhouette Allocation (1 col) */}
-                <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-5 flex flex-col justify-between">
+                {/* Top Silhouettes */}
+                <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-5 flex flex-col justify-between shadow-xs">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Top Silhouettes</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Highest velocity catalog items ({totalUnitsSold} units sold)</p>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-black">Top Silhouettes</h3>
+                    <p className="text-xs text-neutral-400 mt-0.5">Highest velocity catalog items ({totalUnitsSold} units sold)</p>
 
                     <div className="mt-5 space-y-4">
                       {[
@@ -1173,12 +1101,12 @@ export const AdminPage: React.FC = () => {
                       ].map((item) => (
                         <div key={item.name} className="space-y-1.5">
                           <div className="flex justify-between text-xs">
-                            <span className="font-semibold text-slate-800">{item.name}</span>
-                            <span className="text-slate-400 font-medium">{item.units} units</span>
+                            <span className="font-bold text-black">{item.name}</span>
+                            <span className="text-neutral-400 font-mono text-[11px]">{item.units} units</span>
                           </div>
-                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
                             <div
-                              className="bg-slate-900 h-full rounded-full transition-all"
+                              className="bg-black h-full rounded-full transition-all"
                               style={{ width: `${item.pct}%` }}
                             />
                           </div>
@@ -1189,7 +1117,7 @@ export const AdminPage: React.FC = () => {
 
                   <button
                     onClick={() => setActiveTab('inventory')}
-                    className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer mt-4"
+                    className="w-full py-2.5 rounded-full border border-neutral-300 hover:border-black text-xs font-bold text-black flex items-center justify-center gap-1.5 transition-colors cursor-pointer mt-4"
                   >
                     <span>View Full Catalog</span>
                     <ChevronRight size={14} />
@@ -1198,43 +1126,43 @@ export const AdminPage: React.FC = () => {
 
               </div>
 
-              {/* Two Column Tables: Recent Orders & Stock Alerts */}
+              {/* Lower Panels: Recent Orders & Stock Alerts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {/* Recent Orders Card */}
-                <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-4">
+                <div className="bg-white border border-neutral-200 p-6 rounded-2xl shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Recent Customer Orders</h3>
-                      <p className="text-xs text-slate-500">Live incoming dispatches</p>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-black">Recent Dispatches</h3>
+                      <p className="text-xs text-neutral-400">Live incoming client orders</p>
                     </div>
                     <button
                       onClick={() => setActiveTab('orders')}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                      className="text-xs font-bold text-neutral-600 hover:text-black cursor-pointer"
                     >
                       View All ({orders.length}) →
                     </button>
                   </div>
 
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-neutral-100">
                     {orders.slice(0, 3).map((ord) => (
                       <div key={ord.id} className="py-3.5 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-700">
+                          <div className="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center font-bold text-xs text-black">
                             {ord.shippingAddress.fullName.charAt(0)}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-xs text-slate-900">{ord.orderNumber}</span>
+                              <span className="font-bold text-xs text-black">{ord.orderNumber}</span>
                               <button
                                 onClick={() => handleCopyOrderId(ord.orderNumber)}
-                                className="text-slate-400 hover:text-slate-700"
+                                className="text-neutral-400 hover:text-black"
                                 title="Copy order number"
                               >
                                 <Copy size={11} />
                               </button>
                             </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
+                            <p className="text-[11px] text-neutral-500 mt-0.5">
                               {ord.shippingAddress.fullName} • {ord.items.length} item{ord.items.length > 1 ? 's' : ''}
                             </p>
                           </div>
@@ -1242,17 +1170,17 @@ export const AdminPage: React.FC = () => {
 
                         <div className="text-right flex items-center gap-3">
                           <div>
-                            <span className="font-bold text-xs text-slate-900 block">
+                            <span className="font-bold text-xs text-black block">
                               ${ord.total.toFixed(2)}
                             </span>
-                            <span className="text-[10px] text-slate-400">{ord.date}</span>
+                            <span className="text-[10px] text-neutral-400">{ord.date}</span>
                           </div>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                             ord.status === 'DELIVERED'
-                              ? 'bg-slate-100 text-slate-800'
+                              ? 'bg-neutral-100 text-black'
                               : ord.status === 'IN TRANSIT'
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'bg-amber-50 text-amber-800'
+                              ? 'bg-black text-white'
+                              : 'bg-neutral-200 text-neutral-800'
                           }`}>
                             {ord.status}
                           </span>
@@ -1263,43 +1191,43 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 {/* Low Stock Alerts */}
-                <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-4">
+                <div className="bg-white border border-neutral-200 p-6 rounded-2xl shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Inventory Health Alerts</h3>
-                      <p className="text-xs text-slate-500">Items nearing replenishment threshold</p>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-black">Stock Threshold Alerts</h3>
+                      <p className="text-xs text-neutral-400">Replenishment required</p>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neutral-100 text-black">
                       {lowStockItems.length} Low Stock
                     </span>
                   </div>
 
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-neutral-100">
                     {lowStockItems.slice(0, 4).map((item) => (
                       <div key={item.id} className="py-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <img
                             src={getProductImage(item)}
                             alt={item.name}
-                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                            className="w-10 h-10 rounded-lg object-cover border border-neutral-200 shrink-0"
                           />
                           <div>
-                            <h4 className="font-semibold text-xs text-slate-900">{item.name}</h4>
-                            <p className="text-[11px] font-mono text-slate-400">{item.sku} • {item.material}</p>
+                            <h4 className="font-bold text-xs text-black">{item.name}</h4>
+                            <p className="text-[11px] font-mono text-neutral-400">{item.sku} • {item.material}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
                           <div className="text-right">
-                            <span className="text-xs font-bold text-amber-600 block">{item.stock} left</span>
-                            <span className="text-[10px] text-slate-400">Reorder at {item.reorderPoint}</span>
+                            <span className="text-xs font-bold text-black block">{item.stock} left</span>
+                            <span className="text-[10px] text-neutral-400">Reorder at {item.reorderPoint}</span>
                           </div>
                           <button
                             onClick={() => {
                               restockProduct(item.id, 25);
                               showNotice(`Added +25 units to ${item.name}!`);
                             }}
-                            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                            className="px-3 py-1 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold transition-colors cursor-pointer"
                             title="Quick restock +25"
                           >
                             +25
@@ -1316,61 +1244,390 @@ export const AdminPage: React.FC = () => {
           )}
 
           {/* ==========================================
+              TAB: HERO & STOREFRONT CMS (NEW!)
+             ========================================== */}
+          {activeTab === 'hero_cms' && (
+            <div className="space-y-8 animate-fadeIn">
+              
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-200">
+                <div>
+                  <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                    STOREFRONT ARCHITECTURE CMS
+                  </span>
+                  <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">
+                    Hero Banner & Announcement CMS
+                  </h1>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Modify headlines, imagery, CTA buttons, and top promotional banner in real-time.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResetHeroBanner}
+                    className="px-4 py-2 border border-neutral-300 hover:border-black rounded-full text-xs font-bold text-black flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw size={13} />
+                    <span>Reset Defaults</span>
+                  </button>
+                  <button
+                    id="save-hero-cms-btn"
+                    onClick={handleSaveHeroBanner}
+                    className="px-6 py-2 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
+                  >
+                    <Check size={14} />
+                    <span>Save & Publish Live</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* LIVE MINI HERO PREVIEW CARD */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-black" />
+                  <span>Real-Time Storefront Hero Preview</span>
+                </span>
+                <div className="relative w-full h-80 sm:h-96 rounded-3xl overflow-hidden bg-black text-white p-6 sm:p-10 flex flex-col justify-between shadow-2xl border border-neutral-800 select-none">
+                  {/* Background Image */}
+                  <img
+                    src={editHero.imageUrl}
+                    alt="Preview"
+                    className="absolute inset-0 w-full h-full object-cover filter brightness-75 contrast-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+
+                  {/* Top Bar Preview */}
+                  <div className="relative z-10 flex justify-between items-start">
+                    {editHero.badgeActive ? (
+                      <span className="px-3 py-1 bg-black/70 backdrop-blur-xs border border-white/20 text-white rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        ● {editHero.badgeText}
+                      </span>
+                    ) : <div />}
+                    <div className="text-right text-[10px] text-white/75 font-mono hidden sm:block">
+                      {editHero.topRightCaptionLine1}
+                      <br />
+                      <strong className="text-white">{editHero.topRightCaptionLine2}</strong>
+                    </div>
+                  </div>
+
+                  {/* Bottom Typography & CTAs */}
+                  <div className="relative z-10 space-y-3">
+                    <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest block">
+                      {editHero.superTitle}
+                    </span>
+                    <h2 className="font-nike text-4xl sm:text-6xl font-black uppercase tracking-tighter leading-none text-white">
+                      {editHero.mainTitle}
+                    </h2>
+                    <p className="text-xs text-white/80 max-w-xl line-clamp-2">
+                      {editHero.description}
+                    </p>
+                    <div className="flex gap-2.5 pt-2">
+                      <span className="px-5 py-2 bg-white text-black font-bold text-xs uppercase rounded-full tracking-wider">
+                        {editHero.primaryBtnText}
+                      </span>
+                      {editHero.secondaryBtnActive && (
+                        <span className="px-5 py-2 bg-transparent border border-white text-white font-bold text-xs uppercase rounded-full tracking-wider">
+                          {editHero.secondaryBtnText}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* EDIT FORM ACCORDION/GRID */}
+              <form onSubmit={handleSaveHeroBanner} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Panel 1: Hero Typography & Content */}
+                <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-4 shadow-xs">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-black border-b border-neutral-100 pb-3">
+                    Typography & Editorial Copy
+                  </h3>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                      Main Display Headline
+                    </label>
+                    <input
+                      id="hero-main-title-input"
+                      type="text"
+                      required
+                      value={editHero.mainTitle}
+                      onChange={(e) => setEditHero({ ...editHero, mainTitle: e.target.value.toUpperCase() })}
+                      placeholder="e.g. ENGINEERED TO LEAD"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black font-nike uppercase font-black tracking-tight focus:bg-white focus:outline-none focus:border-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                      Super-Title (Lab Category Tag)
+                    </label>
+                    <input
+                      type="text"
+                      value={editHero.superTitle}
+                      onChange={(e) => setEditHero({ ...editHero, superTitle: e.target.value.toUpperCase() })}
+                      placeholder="e.g. RAYLUX TECHNICAL HEADWEAR LAB"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black uppercase font-bold tracking-widest focus:bg-white focus:outline-none focus:border-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                      Manifesto / Sub-Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={editHero.description}
+                      onChange={(e) => setEditHero({ ...editHero, description: e.target.value })}
+                      placeholder="Series 01 Architectural Headwear. Bonded waterproof seams..."
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-neutral-900 focus:bg-white focus:outline-none focus:border-black leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+                          Floating Badge
+                        </label>
+                        <input
+                          type="checkbox"
+                          checked={editHero.badgeActive}
+                          onChange={(e) => setEditHero({ ...editHero, badgeActive: e.target.checked })}
+                          className="rounded cursor-pointer"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={editHero.badgeText}
+                        onChange={(e) => setEditHero({ ...editHero, badgeText: e.target.value.toUpperCase() })}
+                        placeholder="e.g. NEW DROP // SUMMER 2026"
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black font-bold uppercase focus:bg-white focus:outline-none focus:border-black"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                        Top Right Caption (Line 1 & 2)
+                      </label>
+                      <input
+                        type="text"
+                        value={editHero.topRightCaptionLine1}
+                        onChange={(e) => setEditHero({ ...editHero, topRightCaptionLine1: e.target.value.toUpperCase() })}
+                        placeholder="Line 1"
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black uppercase mb-1.5 focus:outline-none focus:border-black"
+                      />
+                      <input
+                        type="text"
+                        value={editHero.topRightCaptionLine2}
+                        onChange={(e) => setEditHero({ ...editHero, topRightCaptionLine2: e.target.value.toUpperCase() })}
+                        placeholder="Line 2"
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black uppercase font-bold focus:outline-none focus:border-black"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel 2: Background Media & Buttons */}
+                <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-5 shadow-xs">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-black border-b border-neutral-100 pb-3">
+                    Hero Media & Action Directives
+                  </h3>
+
+                  {/* Preset Image Selector */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600">
+                      Editorial Photography Presets
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      {PRESET_HERO_IMAGES.map((img) => (
+                        <button
+                          key={img.label}
+                          type="button"
+                          onClick={() => setEditHero({ ...editHero, imageUrl: img.url })}
+                          className={`aspect-video rounded-xl overflow-hidden border-2 relative group cursor-pointer ${
+                            editHero.imageUrl === img.url ? 'border-black ring-2 ring-black' : 'border-neutral-200 opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                          <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-[9px] text-white font-bold text-center p-1">
+                            {img.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div>
+                      <input
+                        type="url"
+                        placeholder="Or paste custom photography URL..."
+                        value={editHero.imageUrl}
+                        onChange={(e) => setEditHero({ ...editHero, imageUrl: e.target.value })}
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-black focus:bg-white focus:outline-none focus:border-black"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Buttons Configuration */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-black block">Primary Button (Solid)</span>
+                      <input
+                        type="text"
+                        value={editHero.primaryBtnText}
+                        onChange={(e) => setEditHero({ ...editHero, primaryBtnText: e.target.value.toUpperCase() })}
+                        placeholder="e.g. SHOP THE COLLECTION"
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-black font-bold uppercase focus:outline-none focus:border-black"
+                      />
+                      <select
+                        value={editHero.primaryBtnAction}
+                        onChange={(e) => setEditHero({ ...editHero, primaryBtnAction: e.target.value as 'shop' | 'lookbook' })}
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
+                      >
+                        <option value="shop">Destination: Storefront Catalog</option>
+                        <option value="lookbook">Destination: 2026 Lookbook</option>
+                      </select>
+                    </div>
+
+                    <div className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-black">Secondary Button</span>
+                        <input
+                          type="checkbox"
+                          checked={editHero.secondaryBtnActive}
+                          onChange={(e) => setEditHero({ ...editHero, secondaryBtnActive: e.target.checked })}
+                          className="rounded cursor-pointer"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={editHero.secondaryBtnText}
+                        onChange={(e) => setEditHero({ ...editHero, secondaryBtnText: e.target.value.toUpperCase() })}
+                        placeholder="e.g. VIEW 2026 LOOKBOOK"
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-black font-bold uppercase focus:outline-none focus:border-black"
+                      />
+                      <select
+                        value={editHero.secondaryBtnAction}
+                        onChange={(e) => setEditHero({ ...editHero, secondaryBtnAction: e.target.value as 'shop' | 'lookbook' })}
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
+                      >
+                        <option value="lookbook">Destination: 2026 Lookbook</option>
+                        <option value="shop">Destination: Storefront Catalog</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Announcement Bar Settings */}
+                  <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-black">
+                        Top Announcement Bar (With Dismiss 'X' Button)
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={editAnnouncement.active}
+                        onChange={(e) => setEditAnnouncement({ ...editAnnouncement, active: e.target.checked })}
+                        className="rounded cursor-pointer"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={editAnnouncement.text}
+                      onChange={(e) => setEditAnnouncement({ ...editAnnouncement, text: e.target.value })}
+                      placeholder="e.g. Members: Complimentary Worldwide Dispatch on orders over $150..."
+                      className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-2 text-xs text-black focus:outline-none focus:border-black"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editAnnouncement.discountCode || ''}
+                        onChange={(e) => setEditAnnouncement({ ...editAnnouncement, discountCode: e.target.value.toUpperCase() })}
+                        placeholder="Voucher Code: MEMBER20"
+                        className="w-1/2 bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-mono uppercase focus:outline-none focus:border-black"
+                      />
+                      <input
+                        type="text"
+                        value={editAnnouncement.linkText || ''}
+                        onChange={(e) => setEditAnnouncement({ ...editAnnouncement, linkText: e.target.value })}
+                        placeholder="Link Text: Join or Sign In"
+                        className="w-1/2 bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-black"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-xs uppercase tracking-wider transition-colors shadow-md cursor-pointer"
+                  >
+                    Publish All Changes to Storefront
+                  </button>
+                </div>
+
+              </form>
+
+            </div>
+          )}
+
+          {/* ==========================================
               TAB: INVENTORY / PRODUCTS
              ========================================== */}
           {activeTab === 'inventory' && (
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-4 border-b border-neutral-200">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Products & Inventory</h1>
-                  <p className="text-xs text-slate-500 mt-1">Manage catalog specifications, update pricing, and monitor depot stock.</p>
+                  <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                    CATALOGUE INVENTORY
+                  </span>
+                  <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">Products & Inventory</h1>
                 </div>
                 <button
                   onClick={handleOpenAddProduct}
-                  className="px-4 py-2.5 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-2 cursor-pointer shrink-0"
+                  className="px-5 py-2.5 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-2 cursor-pointer shrink-0"
                 >
                   <Plus size={16} />
-                  <span>Register New Product</span>
+                  <span>Register Product</span>
                 </button>
               </div>
 
               {/* 4 Inventory Metric Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs">
-                  <span className="text-xs text-slate-500 font-medium">Total Products</span>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{inventory.length}</p>
-                  <span className="text-[11px] text-slate-400">Active SKUs in store</span>
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-xs">
+                  <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Total Products</span>
+                  <p className="font-nike text-3xl font-black text-black mt-1">{inventory.length}</p>
+                  <span className="text-[11px] text-neutral-400">Active catalog items</span>
                 </div>
-                <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs">
-                  <span className="text-xs text-slate-500 font-medium">Depot Units</span>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{totalDepotUnits}</p>
-                  <span className="text-[11px] text-slate-400">Total warehouse stock</span>
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-xs">
+                  <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Depot Units</span>
+                  <p className="font-nike text-3xl font-black text-black mt-1">{totalDepotUnits}</p>
+                  <span className="text-[11px] text-neutral-400">Warehouse inventory</span>
                 </div>
-                <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs">
-                  <span className="text-xs text-slate-500 font-medium">Low Stock Alerts</span>
-                  <p className="text-2xl font-bold text-amber-600 mt-1">{lowStockItems.length}</p>
-                  <span className="text-[11px] text-slate-400">Needs replenishment</span>
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-xs">
+                  <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Low Stock</span>
+                  <p className="font-nike text-3xl font-black text-black mt-1">{lowStockItems.length}</p>
+                  <span className="text-[11px] text-neutral-400">Under reorder threshold</span>
                 </div>
-                <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs">
-                  <span className="text-xs text-slate-500 font-medium">Catalog Retail Value</span>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">${totalAssetValue.toLocaleString()}</p>
-                  <span className="text-[11px] text-slate-400">Valued at USD list price</span>
+                <div className="bg-white border border-neutral-200 p-4 rounded-2xl shadow-xs">
+                  <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Catalog Asset Value</span>
+                  <p className="font-nike text-3xl font-black text-black mt-1">${totalAssetValue.toLocaleString()}</p>
+                  <span className="text-[11px] text-neutral-400">List asset valuation</span>
                 </div>
               </div>
 
               {/* Filter Pills & Search */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-50 p-3 rounded-2xl border border-neutral-200">
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
                   {['ALL', 'HEAVY TWILL', 'GORE-TEX', 'CORDURA', 'RIPSTOP'].map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setInventoryCategoryFilter(cat)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
                         inventoryCategoryFilter === cat
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                          ? 'bg-black text-white shadow-xs'
+                          : 'bg-white border border-neutral-200 text-neutral-700 hover:border-black'
                       }`}
                     >
                       {cat === 'ALL' ? 'All Products' : cat}
@@ -1378,28 +1635,28 @@ export const AdminPage: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="text-xs text-slate-500 font-medium shrink-0">
-                  Showing <span className="font-bold text-slate-900">{filteredInventory.length}</span> of {inventory.length} products
+                <div className="text-xs text-neutral-500 font-medium shrink-0">
+                  Showing <span className="font-bold text-black">{filteredInventory.length}</span> of {inventory.length} items
                 </div>
               </div>
 
               {/* DESKTOP INVENTORY TABLE */}
-              <div className="hidden lg:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+              <div className="hidden lg:block bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="py-3.5 px-5">Product</th>
+                    <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                      <th className="py-3.5 px-5">Product Silhouette</th>
                       <th className="py-3.5 px-4">SKU</th>
-                      <th className="py-3.5 px-4">Fabric / Material</th>
+                      <th className="py-3.5 px-4">Textile Material</th>
                       <th className="py-3.5 px-4">Unit Price</th>
-                      <th className="py-3.5 px-4">Stock Level</th>
+                      <th className="py-3.5 px-4">Depot Stock</th>
                       <th className="py-3.5 px-4">Status</th>
                       <th className="py-3.5 px-5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
+                  <tbody className="divide-y divide-neutral-100 text-xs">
                     {filteredInventory.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <tr key={item.id} className="hover:bg-neutral-50/70 transition-colors group">
                         
                         {/* Thumbnail & Name */}
                         <td className="py-4 px-5">
@@ -1407,30 +1664,30 @@ export const AdminPage: React.FC = () => {
                             <img
                               src={getProductImage(item)}
                               alt={item.name}
-                              className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                              className="w-12 h-12 rounded-xl object-cover border border-neutral-200 shrink-0"
                             />
                             <div>
-                              <h4 className="font-bold text-slate-900 text-sm group-hover:text-black">{item.name}</h4>
-                              <p className="text-[11px] text-slate-400 mt-0.5">{item.category}</p>
+                              <h4 className="font-bold text-black text-sm group-hover:text-black">{item.name}</h4>
+                              <p className="text-[11px] text-neutral-400 uppercase tracking-wider">{item.category}</p>
                             </div>
                           </div>
                         </td>
 
                         {/* SKU */}
-                        <td className="py-4 px-4 font-mono font-medium text-slate-600">
-                          <span className="px-2 py-1 bg-slate-100 rounded-md text-[11px]">
+                        <td className="py-4 px-4 font-mono font-bold text-neutral-700">
+                          <span className="px-2 py-1 bg-neutral-100 rounded text-[11px]">
                             {item.sku}
                           </span>
                         </td>
 
                         {/* Material */}
-                        <td className="py-4 px-4 text-slate-600 font-medium">
+                        <td className="py-4 px-4 text-neutral-700 font-medium">
                           {item.material}
                         </td>
 
                         {/* Price */}
                         <td className="py-4 px-4">
-                          <span className="font-bold text-slate-900 text-sm">
+                          <span className="font-bold text-black text-sm">
                             ${item.price.toFixed(2)}
                           </span>
                         </td>
@@ -1438,13 +1695,11 @@ export const AdminPage: React.FC = () => {
                         {/* Stock Progress */}
                         <td className="py-4 px-4">
                           <div className="space-y-1 w-28">
-                            <div className="flex justify-between text-[11px]">
-                              <span className="font-bold text-slate-800">{item.stock} units</span>
-                            </div>
-                            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <span className="font-bold text-black text-xs">{item.stock} units</span>
+                            <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
-                                  item.stock <= item.reorderPoint ? 'bg-amber-500' : 'bg-emerald-500'
+                                  item.stock <= item.reorderPoint ? 'bg-amber-500' : 'bg-black'
                                 }`}
                                 style={{ width: `${Math.min(100, (item.stock / 50) * 100)}%` }}
                               />
@@ -1454,12 +1709,12 @@ export const AdminPage: React.FC = () => {
 
                         {/* Status Badge */}
                         <td className="py-4 px-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
                             item.stock <= item.reorderPoint
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                              : 'bg-neutral-100 text-black border border-neutral-200'
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${item.stock <= item.reorderPoint ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${item.stock <= item.reorderPoint ? 'bg-amber-500' : 'bg-black'}`} />
                             <span>{item.stock <= item.reorderPoint ? 'Low Stock' : 'In Stock'}</span>
                           </span>
                         </td>
@@ -1469,8 +1724,8 @@ export const AdminPage: React.FC = () => {
                           <div className="inline-flex items-center gap-1.5">
                             <button
                               onClick={() => handleEditProduct(item)}
-                              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                              title="Edit product"
+                              className="px-3 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Edit product specification"
                             >
                               <Edit3 size={12} />
                               <span>Edit</span>
@@ -1480,7 +1735,7 @@ export const AdminPage: React.FC = () => {
                                 restockProduct(item.id, 25);
                                 showNotice(`Added +25 units to ${item.name}!`);
                               }}
-                              className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                              className="px-2.5 py-1.5 border border-neutral-300 hover:border-black text-black rounded-full text-xs font-bold transition-colors cursor-pointer"
                               title="Quick restock +25"
                             >
                               +25
@@ -1492,7 +1747,7 @@ export const AdminPage: React.FC = () => {
                                   showNotice(`Product ${item.name} removed.`);
                                 }
                               }}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                              className="p-1.5 text-neutral-400 hover:text-black rounded-lg transition-colors cursor-pointer"
                               title="Delete product"
                             >
                               <Trash2 size={14} />
@@ -1509,34 +1764,34 @@ export const AdminPage: React.FC = () => {
               {/* MOBILE RESPONSIVE INVENTORY CARDS */}
               <div className="grid grid-cols-1 gap-4 lg:hidden">
                 {filteredInventory.map((item) => (
-                  <div key={item.id} className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-3">
+                  <div key={item.id} className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-xs space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <img
                           src={getProductImage(item)}
                           alt={item.name}
-                          className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0"
+                          className="w-14 h-14 rounded-xl object-cover border border-neutral-200 shrink-0"
                         />
                         <div>
-                          <span className="text-[10px] font-mono text-slate-400 uppercase">{item.sku}</span>
-                          <h4 className="font-bold text-sm text-slate-900">{item.name}</h4>
-                          <span className="text-xs font-bold text-slate-900 mt-0.5 block">${item.price.toFixed(2)}</span>
+                          <span className="text-[10px] font-mono text-neutral-400 uppercase">{item.sku}</span>
+                          <h4 className="font-bold text-sm text-black">{item.name}</h4>
+                          <span className="text-xs font-bold text-black mt-0.5 block">${item.price.toFixed(2)}</span>
                         </div>
                       </div>
 
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        item.stock <= item.reorderPoint ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                        item.stock <= item.reorderPoint ? 'bg-amber-100 text-amber-800' : 'bg-black text-white'
                       }`}>
-                        {item.stock} in stock
+                        {item.stock} left
                       </span>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-slate-500">{item.material}</span>
+                    <div className="pt-2 border-t border-neutral-100 flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-neutral-500">{item.material}</span>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditProduct(item)}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1"
+                          className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-black rounded-full text-xs font-bold flex items-center gap-1"
                         >
                           <Edit3 size={12} />
                           <span>Edit</span>
@@ -1546,7 +1801,7 @@ export const AdminPage: React.FC = () => {
                             restockProduct(item.id, 25);
                             showNotice(`Added +25 units to ${item.name}!`);
                           }}
-                          className="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-semibold"
+                          className="px-3.5 py-1.5 bg-black text-white rounded-full text-xs font-bold"
                         >
                           +25
                         </button>
@@ -1560,35 +1815,37 @@ export const AdminPage: React.FC = () => {
           )}
 
           {/* ==========================================
-              TAB: ORDERS & DISPATCHES
+              TAB: ORDERS & SHIPMENTS
              ========================================== */}
           {(activeTab === 'orders' || activeTab === 'dispatches') && (
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-4 border-b border-neutral-200">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Orders & Shipments</h1>
-                  <p className="text-xs text-slate-500 mt-1">Review customer orders, update tracking numbers, and manage dispatch status.</p>
+                  <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                    ORDER DISPATCHES
+                  </span>
+                  <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">Orders & Fulfillment</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 font-medium">Total Volume:</span>
-                  <span className="text-sm font-bold text-slate-900">${orders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}</span>
+                  <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Total Volume:</span>
+                  <span className="text-sm font-bold text-black font-nike">${orders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-3 overflow-x-auto">
+              <div className="flex items-center gap-2 border-b border-neutral-200 pb-3 overflow-x-auto">
                 {(['ALL', 'PROCESSING', 'IN TRANSIT', 'DELIVERED'] as const).map((status) => {
                   const count = status === 'ALL' ? orders.length : orders.filter(o => o.status === status).length;
                   return (
                     <button
                       key={status}
                       onClick={() => setOrderStatusFilter(status)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
                         orderStatusFilter === status
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                          ? 'bg-black text-white shadow-xs'
+                          : 'bg-neutral-100 text-neutral-600 hover:text-black'
                       }`}
                     >
                       {status === 'ALL' ? 'All Orders' : status} ({count})
@@ -1598,48 +1855,48 @@ export const AdminPage: React.FC = () => {
               </div>
 
               {/* ORDERS TABLE */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="py-3.5 px-5">Order #</th>
-                        <th className="py-3.5 px-4">Customer</th>
-                        <th className="py-3.5 px-4">Items Summary</th>
+                      <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                        <th className="py-3.5 px-5">Order Reference</th>
+                        <th className="py-3.5 px-4">Client Destination</th>
+                        <th className="py-3.5 px-4">Items Manifest</th>
                         <th className="py-3.5 px-4">Carrier & Tracking</th>
-                        <th className="py-3.5 px-4">Total</th>
+                        <th className="py-3.5 px-4">Billed Total</th>
                         <th className="py-3.5 px-4">Status</th>
                         <th className="py-3.5 px-5 text-right">Manifest</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
+                    <tbody className="divide-y divide-neutral-100 text-xs">
                       {filteredOrders.map((ord) => (
-                        <tr key={ord.id} className="hover:bg-slate-50/50 transition-colors">
+                        <tr key={ord.id} className="hover:bg-neutral-50/70 transition-colors">
                           
                           {/* Order Number */}
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-900">{ord.orderNumber}</span>
+                              <span className="font-bold text-black">{ord.orderNumber}</span>
                               <button
                                 onClick={() => handleCopyOrderId(ord.orderNumber)}
-                                className="text-slate-400 hover:text-slate-700"
+                                className="text-neutral-400 hover:text-black"
                                 title="Copy order number"
                               >
-                                {copiedOrderId === ord.orderNumber ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                                {copiedOrderId === ord.orderNumber ? <Check size={12} className="text-black" /> : <Copy size={12} />}
                               </button>
                             </div>
-                            <span className="text-[11px] text-slate-400 mt-0.5 block">{ord.date}</span>
+                            <span className="text-[11px] text-neutral-400 mt-0.5 block">{ord.date}</span>
                           </td>
 
                           {/* Customer */}
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-slate-100 font-bold text-xs text-slate-700 flex items-center justify-center shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-neutral-100 font-bold text-xs text-black flex items-center justify-center shrink-0">
                                 {ord.shippingAddress.fullName.charAt(0)}
                               </div>
                               <div>
-                                <p className="font-semibold text-slate-900 leading-tight">{ord.shippingAddress.fullName}</p>
-                                <p className="text-[11px] text-slate-400">{ord.shippingAddress.city}, {ord.shippingAddress.country}</p>
+                                <p className="font-bold text-black leading-tight">{ord.shippingAddress.fullName}</p>
+                                <p className="text-[11px] text-neutral-400">{ord.shippingAddress.city}, {ord.shippingAddress.country}</p>
                               </div>
                             </div>
                           </td>
@@ -1653,10 +1910,10 @@ export const AdminPage: React.FC = () => {
                                   src={item.image || 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=200&q=80'}
                                   alt={item.productName}
                                   title={`${item.productName} (${item.quantity}x)`}
-                                  className="w-8 h-8 rounded-lg object-cover border border-slate-200"
+                                  className="w-8 h-8 rounded-lg object-cover border border-neutral-200"
                                 />
                               ))}
-                              <span className="text-[11px] text-slate-500 font-medium ml-1">
+                              <span className="text-[11px] text-neutral-500 font-bold ml-1">
                                 {ord.items.reduce((s, i) => s + i.quantity, 0)} item{ord.items.length > 1 ? 's' : ''}
                               </span>
                             </div>
@@ -1665,14 +1922,14 @@ export const AdminPage: React.FC = () => {
                           {/* Courier & Tracking */}
                           <td className="py-4 px-4">
                             <div>
-                              <p className="font-semibold text-slate-800 text-[11px]">{ord.carrier || 'DHL Express Global'}</p>
-                              <p className="font-mono text-[11px] text-slate-400 mt-0.5">{ord.trackingNumber}</p>
+                              <p className="font-bold text-black text-[11px]">{ord.carrier || 'DHL Express Global'}</p>
+                              <p className="font-mono text-[11px] text-neutral-400 mt-0.5">{ord.trackingNumber}</p>
                             </div>
                           </td>
 
                           {/* Total */}
                           <td className="py-4 px-4">
-                            <span className="font-bold text-slate-900 text-sm">
+                            <span className="font-bold text-black text-sm">
                               ${ord.total.toFixed(2)}
                             </span>
                           </td>
@@ -1686,12 +1943,12 @@ export const AdminPage: React.FC = () => {
                                 updateOrderStatus(ord.id, newStat);
                                 showNotice(`Order ${ord.orderNumber} marked as ${newStat}`);
                               }}
-                              className={`px-2.5 py-1 rounded-full text-xs font-bold border focus:outline-none cursor-pointer ${
+                              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border focus:outline-none cursor-pointer ${
                                 ord.status === 'DELIVERED'
-                                  ? 'bg-slate-100 text-slate-800 border-slate-200'
+                                  ? 'bg-neutral-100 text-black border-neutral-300'
                                   : ord.status === 'IN TRANSIT'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  ? 'bg-black text-white border-black'
+                                  : 'bg-neutral-200 text-neutral-800 border-neutral-300'
                               }`}
                             >
                               <option value="PROCESSING">PROCESSING</option>
@@ -1704,7 +1961,7 @@ export const AdminPage: React.FC = () => {
                           <td className="py-4 px-5 text-right">
                             <button
                               onClick={() => setSelectedInspectOrder(ord)}
-                              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                              className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-black rounded-full text-xs font-bold transition-colors cursor-pointer"
                             >
                               View Slip
                             </button>
@@ -1721,102 +1978,175 @@ export const AdminPage: React.FC = () => {
           )}
 
           {/* ==========================================
-              TAB: CUSTOMERS
+              TAB: CUSTOMER CRM (EXPANDED!)
              ========================================== */}
           {activeTab === 'customers' && (
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-4 border-b border-neutral-200">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Customer Directory</h1>
-                  <p className="text-xs text-slate-500 mt-1">Review registered store customers, authentication accounts, and order history.</p>
+                  <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                    CLIENT RELATIONSHIP MANAGEMENT (CRM)
+                  </span>
+                  <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">Customer Directory</h1>
                 </div>
-                <div className="text-xs font-semibold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                  Total Accounts: <span className="text-slate-900 font-bold">{registeredUsers.length}</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    id="register-client-btn"
+                    onClick={handleOpenAddCustomer}
+                    className="px-5 py-2.5 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <UserPlus size={15} />
+                    <span>Register Client</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* CRM Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-4 bg-white border border-neutral-200 rounded-2xl shadow-xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Total Clients</span>
+                  <p className="font-nike text-3xl font-black text-black mt-1">{registeredUsers.length}</p>
+                  <span className="text-[11px] text-neutral-400">Registered on store</span>
+                </div>
+                <div className="p-4 bg-white border border-neutral-200 rounded-2xl shadow-xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">VIP Concierge</span>
+                  <p className="font-nike text-3xl font-black text-black mt-1">{registeredUsers.filter(u => u.status === 'VIP').length}</p>
+                  <span className="text-[11px] text-neutral-400">High lifetime value</span>
+                </div>
+                <div className="p-4 bg-white border border-neutral-200 rounded-2xl shadow-xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Active Members</span>
+                  <p className="font-nike text-3xl font-black text-black mt-1">{registeredUsers.filter(u => u.status === 'ACTIVE').length}</p>
+                  <span className="text-[11px] text-neutral-400">Good standing</span>
+                </div>
+                <div className="p-4 bg-white border border-neutral-200 rounded-2xl shadow-xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Suspended</span>
+                  <p className="font-nike text-3xl font-black text-neutral-400 mt-1">{registeredUsers.filter(u => u.status === 'SUSPENDED').length}</p>
+                  <span className="text-[11px] text-neutral-400">Restricted access</span>
                 </div>
               </div>
 
               {/* Filter Pills */}
               <div className="flex items-center gap-2">
-                {(['ALL', 'GOOGLE', 'EMAIL'] as const).map((prov) => (
+                {(['ALL', 'VIP', 'ACTIVE', 'SUSPENDED'] as const).map((st) => (
                   <button
-                    key={prov}
-                    onClick={() => setCustomerFilter(prov)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                      customerFilter === prov
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    key={st}
+                    onClick={() => setCustomerFilter(st)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      customerFilter === st
+                        ? 'bg-black text-white shadow-xs'
+                        : 'bg-neutral-100 text-neutral-600 hover:text-black'
                     }`}
                   >
-                    {prov === 'ALL' ? 'All Accounts' : prov === 'GOOGLE' ? 'Google OAuth' : 'Email & Password'}
+                    {st === 'ALL' ? 'All Clients' : st}
                   </button>
                 ))}
               </div>
 
-              {/* Customers List */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+              {/* Customers List Table */}
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="py-3.5 px-5">Customer</th>
-                        <th className="py-3.5 px-4">Email</th>
-                        <th className="py-3.5 px-4">Auth Method</th>
-                        <th className="py-3.5 px-4">Member Since</th>
-                        <th className="py-3.5 px-4">Lifetime Orders</th>
-                        <th className="py-3.5 px-5 text-right">Details</th>
+                      <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                        <th className="py-3.5 px-5">Client Profile</th>
+                        <th className="py-3.5 px-4">Contact & Phone</th>
+                        <th className="py-3.5 px-4">Status Tier</th>
+                        <th className="py-3.5 px-4">Cap Size Pref</th>
+                        <th className="py-3.5 px-4">Total Orders</th>
+                        <th className="py-3.5 px-4">Lifetime Spend</th>
+                        <th className="py-3.5 px-5 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
+                    <tbody className="divide-y divide-neutral-100 text-xs">
                       {filteredCustomers.map((cust) => {
                         const custOrders = orders.filter(o => o.shippingAddress.fullName.toLowerCase() === cust.name.toLowerCase());
-                        const totalSpent = custOrders.reduce((sum, o) => sum + o.total, 0);
+                        const totalSpent = custOrders.reduce((sum, o) => sum + o.total, cust.totalSpent || 0);
 
                         return (
-                          <tr key={cust.id} className="hover:bg-slate-50/50 transition-colors">
+                          <tr key={cust.id} className="hover:bg-neutral-50/70 transition-colors">
                             
                             <td className="py-4 px-5">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                                <div className="w-9 h-9 rounded-full bg-black text-white font-bold text-xs flex items-center justify-center">
                                   {cust.name.charAt(0)}
                                 </div>
-                                <span className="font-bold text-slate-900">{cust.name}</span>
+                                <div>
+                                  <span className="font-bold text-black text-sm block">{cust.name}</span>
+                                  <span className="text-[11px] text-neutral-400">{cust.email}</span>
+                                </div>
                               </div>
                             </td>
 
-                            <td className="py-4 px-4 text-slate-600 font-medium">
-                              {cust.email}
+                            <td className="py-4 px-4 text-neutral-600 font-mono text-[11px]">
+                              {cust.phone || 'No phone on file'}
                             </td>
 
+                            {/* Status Pill */}
                             <td className="py-4 px-4">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                cust.provider === 'google' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700'
-                              }`}>
-                                {cust.provider}
-                              </span>
+                              <select
+                                value={cust.status || 'ACTIVE'}
+                                onChange={(e) => {
+                                  const newSt = e.target.value as 'ACTIVE' | 'VIP' | 'SUSPENDED';
+                                  setCustomerStatus(cust.id, newSt);
+                                  showNotice(`${cust.name} set to ${newSt}!`);
+                                }}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border focus:outline-none cursor-pointer ${
+                                  cust.status === 'VIP'
+                                    ? 'bg-black text-white border-black'
+                                    : cust.status === 'SUSPENDED'
+                                    ? 'bg-neutral-200 text-neutral-600 border-neutral-300'
+                                    : 'bg-neutral-100 text-black border-neutral-200'
+                                }`}
+                              >
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="VIP">VIP</option>
+                                <option value="SUSPENDED">SUSPENDED</option>
+                              </select>
                             </td>
 
-                            <td className="py-4 px-4 text-slate-400">
-                              {cust.joinedDate || '2026-09-01'}
+                            <td className="py-4 px-4 text-neutral-600 font-bold text-[11px]">
+                              {cust.sizePreference || 'L/XL (58-61CM)'}
                             </td>
 
-                            <td className="py-4 px-4">
-                              <div>
-                                <span className="font-bold text-slate-900">{custOrders.length} order{custOrders.length !== 1 ? 's' : ''}</span>
-                                {totalSpent > 0 && (
-                                  <span className="text-[11px] text-slate-400 block">${totalSpent.toFixed(2)} spent</span>
-                                )}
-                              </div>
+                            <td className="py-4 px-4 font-bold text-black">
+                              {custOrders.length || cust.totalOrders || 0} orders
+                            </td>
+
+                            <td className="py-4 px-4 font-bold text-black">
+                              ${totalSpent.toFixed(2)}
                             </td>
 
                             <td className="py-4 px-5 text-right">
-                              <button
-                                onClick={() => setInspectCustomer(cust)}
-                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                              >
-                                View Profile
-                              </button>
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  id={`inspect-cust-${cust.id}`}
+                                  onClick={() => setInspectCustomer(cust)}
+                                  className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-black rounded-full text-xs font-bold transition-colors cursor-pointer inspect-customer-btn"
+                                >
+                                  Profile
+                                </button>
+                                <button
+                                  onClick={() => handleEditCustomer(cust)}
+                                  className="p-1.5 text-neutral-400 hover:text-black rounded-lg transition-colors cursor-pointer"
+                                  title="Edit client"
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Remove client record for ${cust.name}?`)) {
+                                      deleteCustomer(cust.id);
+                                      showNotice(`Client ${cust.name} deleted.`);
+                                    }
+                                  }}
+                                  className="p-1.5 text-neutral-400 hover:text-black rounded-lg transition-colors cursor-pointer"
+                                  title="Delete client"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </td>
 
                           </tr>
@@ -1837,28 +2167,30 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Promo Codes & Discounts</h1>
-                <p className="text-xs text-slate-500 mt-1">Create promotional coupons, assign percentage discounts, and review voucher redemption.</p>
+              <div className="pb-4 border-b border-neutral-200">
+                <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                  COMMERCE PROMOTIONS
+                </span>
+                <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">Promo Codes & Discounts</h1>
               </div>
 
               {/* Create Promo Code Card */}
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs">
-                <h3 className="text-sm font-bold text-slate-900 mb-4">Create New Discount Voucher</h3>
+              <div className="bg-white border border-neutral-200 p-6 rounded-2xl shadow-xs">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-black mb-4">Create Discount Voucher</h3>
                 <form onSubmit={handleCreatePromoCode} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Coupon Code</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">Coupon Code</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. SUMMER25"
                       value={newPromoCode}
                       onChange={(e) => setNewPromoCode(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono uppercase focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs font-mono uppercase focus:bg-white focus:outline-none focus:border-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Discount Percentage (%)</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">Discount %</label>
                     <input
                       type="number"
                       required
@@ -1866,25 +2198,25 @@ export const AdminPage: React.FC = () => {
                       max="100"
                       value={newPromoPercent}
                       onChange={(e) => setNewPromoPercent(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs font-bold focus:bg-white focus:outline-none focus:border-black"
                     />
                   </div>
                   <div className="flex items-end">
                     <button
                       type="submit"
-                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                      className="w-full py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
                     >
-                      + Create Promo Code
+                      + Create Voucher
                     </button>
                   </div>
                 </form>
               </div>
 
               {/* Promo Codes Table */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                       <th className="py-3.5 px-5">Code</th>
                       <th className="py-3.5 px-4">Discount</th>
                       <th className="py-3.5 px-4">Status</th>
@@ -1893,27 +2225,27 @@ export const AdminPage: React.FC = () => {
                       <th className="py-3.5 px-5 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-neutral-100">
                     {promoCodes.map((p) => (
-                      <tr key={p.code} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3.5 px-5 font-mono font-bold text-slate-900">{p.code}</td>
-                        <td className="py-3.5 px-4 font-semibold text-emerald-600">{p.percent}% OFF</td>
+                      <tr key={p.code} className="hover:bg-neutral-50/70 transition-colors">
+                        <td className="py-3.5 px-5 font-mono font-bold text-black">{p.code}</td>
+                        <td className="py-3.5 px-4 font-bold text-black">{p.percent}% OFF</td>
                         <td className="py-3.5 px-4">
                           <button
                             onClick={() => handleTogglePromoCode(p.code)}
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer ${
-                              p.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                            className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
+                              p.active ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'
                             }`}
                           >
                             {p.active ? 'ACTIVE' : 'PAUSED'}
                           </button>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-500">{p.uses} redeemed</td>
-                        <td className="py-3.5 px-4 text-slate-400">{p.expiry}</td>
+                        <td className="py-3.5 px-4 text-neutral-500">{p.uses} redeemed</td>
+                        <td className="py-3.5 px-4 text-neutral-400">{p.expiry}</td>
                         <td className="py-3.5 px-5 text-right">
                           <button
                             onClick={() => handleDeletePromoCode(p.code)}
-                            className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors"
+                            className="text-neutral-400 hover:text-black p-1 rounded transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1934,27 +2266,29 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-4 border-b border-neutral-200">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Support Concierge Desk</h1>
-                  <p className="text-xs text-slate-500 mt-1">Review inquiries, respond to tickets, and track customer resolution status.</p>
+                  <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                    CLIENT CARE
+                  </span>
+                  <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">Support Concierge Desk</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 text-xs">
+                  <div className="flex items-center gap-1 bg-neutral-100 rounded-full p-1 text-xs">
                     {(['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'] as const).map((st) => (
                       <button
                         key={st}
                         onClick={() => setSupportFilter(st)}
-                        className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
-                          supportFilter === st ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                        className={`px-3 py-1 rounded-full font-bold uppercase text-[10px] tracking-wider transition-all ${
+                          supportFilter === st ? 'bg-black text-white' : 'text-neutral-600 hover:text-black'
                         }`}
                       >
                         {st}
                       </button>
                     ))}
                   </div>
-                  <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
-                    {openTicketsCount} Open Tickets
+                  <span className="px-3 py-1 rounded-full bg-black text-white text-xs font-bold">
+                    {openTicketsCount} Open
                   </span>
                 </div>
               </div>
@@ -1963,11 +2297,11 @@ export const AdminPage: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Tickets List */}
-                <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
-                  <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Ticket Queue</h3>
+                <div className="bg-white border border-neutral-200 rounded-2xl shadow-xs overflow-hidden">
+                  <div className="p-4 border-b border-neutral-200 bg-neutral-50">
+                    <h3 className="text-xs font-bold text-black uppercase tracking-wider">Ticket Queue</h3>
                   </div>
-                  <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
+                  <div className="divide-y divide-neutral-100 max-h-[600px] overflow-y-auto">
                     {filteredTickets.map((t) => {
                       const isSelected = selectedTicket?.id === t.id;
                       const lastMessage = t.messages?.[t.messages.length - 1]?.message || 'No messages';
@@ -1976,24 +2310,24 @@ export const AdminPage: React.FC = () => {
                           key={t.id}
                           onClick={() => setSelectedTicket(t)}
                           className={`p-4 cursor-pointer transition-colors ${
-                            isSelected ? 'bg-slate-100/80 border-l-4 border-slate-900' : 'hover:bg-slate-50'
+                            isSelected ? 'bg-neutral-100 border-l-4 border-black' : 'hover:bg-neutral-50'
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-mono text-[10px] text-slate-400 font-bold">{t.ticketNumber || t.id}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            <span className="font-mono text-[10px] text-neutral-400 font-bold">{t.ticketNumber || t.id}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                               t.status === 'RESOLVED'
-                                ? 'bg-slate-100 text-slate-600'
+                                ? 'bg-neutral-200 text-neutral-700'
                                 : t.status === 'IN_PROGRESS'
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'bg-amber-50 text-amber-700'
+                                ? 'bg-black text-white'
+                                : 'bg-neutral-100 text-black border border-neutral-300'
                             }`}>
                               {t.status}
                             </span>
                           </div>
-                          <h4 className="font-semibold text-xs text-slate-900 mt-1">{t.subject}</h4>
-                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{lastMessage}</p>
-                          <span className="text-[10px] text-slate-400 block mt-2">{t.customerName} • {t.createdAt}</span>
+                          <h4 className="font-bold text-xs text-black mt-1">{t.subject}</h4>
+                          <p className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{lastMessage}</p>
+                          <span className="text-[10px] text-neutral-400 block mt-2">{t.customerName} • {t.createdAt}</span>
                         </div>
                       );
                     })}
@@ -2001,26 +2335,20 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 {/* Ticket Details & Reply Area */}
-                <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
+                <div className="lg:col-span-2 bg-white border border-neutral-200 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
                   {selectedTicket ? (
                     <div className="space-y-6">
-                      <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+                      <div className="flex items-start justify-between pb-4 border-b border-neutral-200">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-slate-400 font-bold">{selectedTicket.ticketNumber || selectedTicket.id}</span>
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              selectedTicket.status === 'RESOLVED'
-                                ? 'bg-slate-100 text-slate-600'
-                                : selectedTicket.status === 'IN_PROGRESS'
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'bg-amber-50 text-amber-700'
-                            }`}>
+                            <span className="font-mono text-xs text-neutral-400 font-bold">{selectedTicket.ticketNumber || selectedTicket.id}</span>
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-black text-white">
                               {selectedTicket.status}
                             </span>
                           </div>
-                          <h3 className="text-lg font-bold text-slate-900 mt-1">{selectedTicket.subject}</h3>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            Client: <span className="font-semibold text-slate-800">{selectedTicket.customerName}</span> ({selectedTicket.customerEmail})
+                          <h3 className="text-lg font-bold text-black mt-1">{selectedTicket.subject}</h3>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            Client: <span className="font-bold text-black">{selectedTicket.customerName}</span> ({selectedTicket.customerEmail})
                           </p>
                         </div>
 
@@ -2033,7 +2361,7 @@ export const AdminPage: React.FC = () => {
                             setSelectedTicket({ ...selectedTicket, status: newSt });
                             showNotice(`Ticket status changed to ${newSt}`);
                           }}
-                          className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none"
+                          className="px-3 py-1.5 bg-neutral-100 border border-neutral-300 rounded-full text-xs font-bold text-black focus:outline-none"
                         >
                           <option value="OPEN">Mark OPEN</option>
                           <option value="IN_PROGRESS">Mark IN PROGRESS</option>
@@ -2043,18 +2371,17 @@ export const AdminPage: React.FC = () => {
 
                       {/* Message Thread */}
                       <div className="space-y-4 max-h-72 overflow-y-auto pr-2">
-                        {/* Messages in thread */}
                         {selectedTicket.messages?.map((msg) => (
                           <div
                             key={msg.id}
-                            className={`p-4 rounded-2xl border text-xs leading-relaxed ${
+                            className={`p-4 rounded-2xl text-xs leading-relaxed ${
                               msg.sender === 'admin'
-                                ? 'bg-slate-900 text-white border-slate-900 ml-6'
-                                : 'bg-slate-50 border-slate-200 text-slate-800 mr-6'
+                                ? 'bg-black text-white ml-6'
+                                : 'bg-neutral-100 text-black mr-6'
                             }`}
                           >
-                            <div className="flex justify-between text-[10px] opacity-75 mb-1">
-                              <span className="font-semibold">{msg.senderName}</span>
+                            <div className="flex justify-between text-[10px] opacity-75 mb-1 font-bold">
+                              <span>{msg.senderName}</span>
                               <span>{msg.timestamp}</span>
                             </div>
                             <p>{msg.message}</p>
@@ -2063,19 +2390,19 @@ export const AdminPage: React.FC = () => {
                       </div>
 
                       {/* Reply Box */}
-                      <form onSubmit={handleAdminSendReply} className="pt-4 border-t border-slate-100 space-y-3">
+                      <form onSubmit={handleAdminSendReply} className="pt-4 border-t border-neutral-200 space-y-3">
                         <textarea
                           rows={3}
                           required
                           placeholder="Type response to client..."
                           value={adminReplyText}
                           onChange={(e) => setAdminReplyText(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-3.5 text-xs text-black placeholder-neutral-400 focus:bg-white focus:outline-none focus:border-black font-medium"
                         />
                         <div className="flex justify-end">
                           <button
                             type="submit"
-                            className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-2 cursor-pointer transition-all"
+                            className="px-6 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-2 cursor-pointer transition-all"
                           >
                             <Send size={13} />
                             <span>Send Reply</span>
@@ -2084,7 +2411,7 @@ export const AdminPage: React.FC = () => {
                       </form>
                     </div>
                   ) : (
-                    <div className="h-96 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                    <div className="h-96 flex flex-col items-center justify-center text-neutral-400 space-y-2">
                       <LifeBuoy size={32} className="stroke-[1.5]" />
                       <p className="text-xs font-medium">Select a support ticket to review conversation thread</p>
                     </div>
@@ -2103,38 +2430,35 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Raylux Intelligence Suite</h1>
-                <p className="text-xs text-slate-500 mt-1">Autonomous conversational assistant powered by Gemini 3.8 Flash.</p>
+              <div className="pb-4 border-b border-neutral-200">
+                <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                  INTELLIGENCE RUNTIME
+                </span>
+                <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">AI Concierge & Runtime</h1>
               </div>
 
               {/* Chat Test Console */}
-              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-6 space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="bg-white border border-neutral-200 rounded-2xl shadow-xs p-6 space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center">
                       <Bot size={16} />
                     </div>
                     <div>
-                      <h3 className="text-xs font-bold text-slate-900">Gemini 3.8 Interactive Playground</h3>
-                      <p className="text-[10px] text-slate-400">Live evaluation against current orders and catalog</p>
+                      <h3 className="text-xs font-bold text-black uppercase tracking-wider">Gemini 3.8 Flash Playground</h3>
+                      <p className="text-[10px] text-neutral-400">Live evaluation against catalog and orders</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleSaveAiConfig}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1 rounded-lg border border-slate-200"
-                    >
-                      Save Parameters
-                    </button>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                      {aiConfig.enabled ? 'Agent Active' : 'Agent Paused'}
-                    </span>
-                  </div>
+                  <button
+                    onClick={handleSaveAiConfig}
+                    className="text-xs font-bold text-black px-4 py-1.5 rounded-full border border-neutral-300 hover:border-black"
+                  >
+                    Save Parameters
+                  </button>
                 </div>
 
                 {/* Conversation Body */}
-                <div className="space-y-3 max-h-80 overflow-y-auto p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="space-y-3 max-h-80 overflow-y-auto p-4 bg-neutral-50 rounded-xl border border-neutral-200">
                   {testAiConversation.map((msg, i) => (
                     <div
                       key={i}
@@ -2143,8 +2467,8 @@ export const AdminPage: React.FC = () => {
                       <div
                         className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
                           msg.role === 'user'
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-white border border-slate-200 text-slate-800 shadow-xs'
+                            ? 'bg-black text-white'
+                            : 'bg-white border border-neutral-200 text-black shadow-xs'
                         }`}
                       >
                         {msg.text}
@@ -2152,8 +2476,8 @@ export const AdminPage: React.FC = () => {
                     </div>
                   ))}
                   {testAiLoading && (
-                    <div className="text-xs text-slate-400 flex items-center gap-2">
-                      <Sparkles size={14} className="animate-spin text-slate-600" />
+                    <div className="text-xs text-neutral-400 flex items-center gap-2">
+                      <Sparkles size={14} className="animate-spin text-black" />
                       <span>Gemini evaluating query...</span>
                     </div>
                   )}
@@ -2166,15 +2490,15 @@ export const AdminPage: React.FC = () => {
                     placeholder="Ask e.g. 'What is the stock level of Monolith 01?' or 'Show order RLX-8921-EU status'..."
                     value={testAiQuery}
                     onChange={(e) => setTestAiQuery(e.target.value)}
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
+                    className="flex-1 bg-neutral-50 border border-neutral-200 rounded-full px-4 py-2.5 text-xs text-black focus:bg-white focus:outline-none focus:border-black font-medium"
                   />
                   <button
                     type="submit"
                     disabled={testAiLoading}
-                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="px-6 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold uppercase tracking-wider shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Send size={13} />
-                    <span>Run Query</span>
+                    <span>Query</span>
                   </button>
                 </form>
               </div>
@@ -2189,24 +2513,26 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-6 animate-fadeIn">
               
               {/* Header */}
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Store Settings</h1>
-                <p className="text-xs text-slate-500 mt-1">Configure global monetary exchange rates, shipping policies, and operational rules.</p>
+              <div className="pb-4 border-b border-neutral-200">
+                <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
+                  CONFIGURATION
+                </span>
+                <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">Store Settings & Currencies</h1>
               </div>
 
               {/* TRI-CURRENCY CONTROLLER CARD */}
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="bg-white border border-neutral-200 p-6 rounded-2xl shadow-xs space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+                    <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center">
                       <Coins size={18} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Tri-Currency Monetary Controller</h3>
-                      <p className="text-xs text-slate-500">Universal store pricing for USD ($), GBP (£), and EUR (€)</p>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-black">Tri-Currency Monetary Controller</h3>
+                      <p className="text-xs text-neutral-400">Universal store pricing for USD ($), GBP (£), and EUR (€)</p>
                     </div>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                  <span className="px-3 py-1 rounded-full bg-black text-white text-xs font-bold">
                     Active
                   </span>
                 </div>
@@ -2214,13 +2540,13 @@ export const AdminPage: React.FC = () => {
                 {/* Form to update rates */}
                 <form onSubmit={handleSaveExchangeRate} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {/* GBP Rate */}
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-700">🇬🇧 British Pound (GBP)</span>
-                      <span className="text-xs font-mono font-bold text-slate-500">1 USD = £{exchangeRates.GBP}</span>
+                      <span className="text-xs font-bold text-black">🇬🇧 British Pound (GBP)</span>
+                      <span className="text-xs font-mono font-bold text-neutral-500">1 USD = £{exchangeRates.GBP}</span>
                     </div>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold text-xs">£</span>
+                      <span className="absolute left-3.5 top-2.5 text-neutral-400 font-bold text-xs">£</span>
                       <input
                         type="number"
                         step="0.01"
@@ -2228,22 +2554,22 @@ export const AdminPage: React.FC = () => {
                         required
                         value={editGbpRate}
                         onChange={(e) => setEditGbpRate(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-4 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                        className="w-full bg-white border border-neutral-300 rounded-xl pl-8 pr-4 py-2 text-xs font-bold text-black focus:outline-none focus:border-black"
                       />
                     </div>
-                    <span className="text-[11px] text-slate-400 block">
+                    <span className="text-[11px] text-neutral-400 block font-mono">
                       Inverse: £1 GBP ≈ ${(1 / (parseFloat(editGbpRate) || 0.79)).toFixed(2)} USD
                     </span>
                   </div>
 
                   {/* EUR Rate */}
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-700">🇪🇺 European Euro (EUR)</span>
-                      <span className="text-xs font-mono font-bold text-slate-500">1 USD = €{exchangeRates.EUR}</span>
+                      <span className="text-xs font-bold text-black">🇪🇺 European Euro (EUR)</span>
+                      <span className="text-xs font-mono font-bold text-neutral-500">1 USD = €{exchangeRates.EUR}</span>
                     </div>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold text-xs">€</span>
+                      <span className="absolute left-3.5 top-2.5 text-neutral-400 font-bold text-xs">€</span>
                       <input
                         type="number"
                         step="0.01"
@@ -2251,10 +2577,10 @@ export const AdminPage: React.FC = () => {
                         required
                         value={editEurRate}
                         onChange={(e) => setEditEurRate(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-4 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                        className="w-full bg-white border border-neutral-300 rounded-xl pl-8 pr-4 py-2 text-xs font-bold text-black focus:outline-none focus:border-black"
                       />
                     </div>
-                    <span className="text-[11px] text-slate-400 block">
+                    <span className="text-[11px] text-neutral-400 block font-mono">
                       Inverse: €1 EUR ≈ ${(1 / (parseFloat(editEurRate) || 0.92)).toFixed(2)} USD
                     </span>
                   </div>
@@ -2262,7 +2588,7 @@ export const AdminPage: React.FC = () => {
                   <div className="sm:col-span-2 flex justify-end">
                     <button
                       type="submit"
-                      className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                      className="px-6 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
                     >
                       Save Exchange Rates
                     </button>
@@ -2270,13 +2596,13 @@ export const AdminPage: React.FC = () => {
                 </form>
 
                 {/* Sample Conversion Matrix */}
-                <div className="pt-4 border-t border-slate-100 space-y-3">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Live Storefront Sample Matrix</span>
+                <div className="pt-4 border-t border-neutral-200 space-y-3">
+                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest block">Live Storefront Sample Matrix</span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     {[85, 110, 145, 195].map((usdVal) => (
-                      <div key={usdVal} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="font-bold text-slate-900 block">${usdVal} USD</span>
-                        <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+                      <div key={usdVal} className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+                        <span className="font-bold text-black block">${usdVal} USD</span>
+                        <div className="mt-1 space-y-0.5 text-[11px] text-neutral-500 font-medium">
                           <p>£{(usdVal * exchangeRates.GBP).toFixed(2)} GBP</p>
                           <p>€{(usdVal * exchangeRates.EUR).toFixed(2)} EUR</p>
                         </div>
@@ -2287,44 +2613,44 @@ export const AdminPage: React.FC = () => {
               </div>
 
               {/* Shipping & Delivery Settings */}
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-4">
-                <h3 className="text-sm font-bold text-slate-900">Shipping Policies & Delivery Tiers</h3>
+              <div className="bg-white border border-neutral-200 p-6 rounded-2xl shadow-xs space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-black">Shipping Policies & Delivery Tiers</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Free Shipping Over ($)</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">Free Shipping Over ($)</label>
                     <input
                       type="number"
                       value={freeShippingThreshold}
                       onChange={(e) => setFreeShippingThreshold(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:border-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Standard Dispatch Fee ($)</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">Standard Dispatch ($)</label>
                     <input
                       type="number"
                       value={standardRate}
                       onChange={(e) => setStandardRate(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:border-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Express Dispatch Fee ($)</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">Express Dispatch ($)</label>
                     <input
                       type="number"
                       value={expressRate}
                       onChange={(e) => setExpressRate(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:border-black"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Store Sales Tax Rate (%)</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">Sales Tax Rate (%)</label>
                     <input
                       type="number"
                       step="0.1"
                       value={taxRate}
                       onChange={(e) => setTaxRate(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:border-black"
                     />
                   </div>
                 </div>
@@ -2348,63 +2674,71 @@ export const AdminPage: React.FC = () => {
         initialData={editingProduct}
       />
 
-      {/* 2. ORDER PACKING SLIP MODAL */}
+      {/* 2. CUSTOMER ADD & EDIT MODAL (CRM) */}
+      <CustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onSave={handleSaveCustomerModal}
+        initialData={editingCustomer}
+      />
+
+      {/* 3. ORDER PACKING SLIP MODAL */}
       {selectedInspectOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6 relative max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-lg bg-white rounded-2xl border border-neutral-200 shadow-2xl p-6 sm:p-8 space-y-6 relative max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-4 border-b border-neutral-200">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Packing Slip Manifest</span>
-                <h3 className="text-xl font-bold text-slate-900 mt-0.5">{selectedInspectOrder.orderNumber}</h3>
-                <span className="text-xs text-slate-500">{selectedInspectOrder.date}</span>
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Packing Slip Manifest</span>
+                <h3 className="text-xl font-nike font-black uppercase text-black mt-0.5">{selectedInspectOrder.orderNumber}</h3>
+                <span className="text-xs text-neutral-500 font-medium">{selectedInspectOrder.date}</span>
               </div>
               <button
                 onClick={() => setSelectedInspectOrder(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+                className="p-1.5 text-neutral-400 hover:text-black rounded-lg"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Destination */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1">
-              <span className="font-bold text-slate-700 block uppercase text-[10px]">Shipment Destination</span>
-              <p className="font-semibold text-slate-900">{selectedInspectOrder.shippingAddress.fullName}</p>
-              <p className="text-slate-500">{selectedInspectOrder.shippingAddress.street}</p>
-              <p className="text-slate-500">{selectedInspectOrder.shippingAddress.city}, {selectedInspectOrder.shippingAddress.country}</p>
+            <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 text-xs space-y-1">
+              <span className="font-bold text-neutral-400 block uppercase text-[10px] tracking-wider">Shipment Destination</span>
+              <p className="font-bold text-black text-sm">{selectedInspectOrder.shippingAddress.fullName}</p>
+              <p className="text-neutral-600">{selectedInspectOrder.shippingAddress.street}</p>
+              <p className="text-neutral-600">{selectedInspectOrder.shippingAddress.city}, {selectedInspectOrder.shippingAddress.country}</p>
             </div>
 
             {/* Line Items */}
             <div className="space-y-3">
-              <span className="font-bold text-slate-700 block uppercase text-[10px]">Manifest Items</span>
-              <div className="divide-y divide-slate-100">
+              <span className="font-bold text-neutral-400 block uppercase text-[10px] tracking-wider">Manifest Items</span>
+              <div className="divide-y divide-neutral-100">
                 {selectedInspectOrder.items.map((item, idx) => (
                   <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-3">
                       <img
                         src={item.image || 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=150&q=80'}
                         alt={item.productName}
-                        className="w-10 h-10 rounded-lg object-cover border border-slate-200"
+                        className="w-10 h-10 rounded-lg object-cover border border-neutral-200"
                       />
                       <div>
-                        <h4 className="font-semibold text-slate-900">{item.productName}</h4>
-                        <span className="text-[11px] text-slate-400">Qty: {item.quantity} • {item.size}</span>
+                        <h4 className="font-bold text-black">{item.productName}</h4>
+                        <span className="text-[11px] text-neutral-400">Qty: {item.quantity} • {item.size}</span>
                       </div>
                     </div>
-                    <span className="font-bold text-slate-900">${(item.price * item.quantity).toFixed(2)}</span>
+                    <span className="font-bold text-black">${(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
-              <span className="font-bold text-slate-600">Total Charged:</span>
-              <span className="text-base font-bold text-slate-900">${selectedInspectOrder.total.toFixed(2)}</span>
+            <div className="pt-4 border-t border-neutral-200 flex justify-between items-center text-xs">
+              <span className="font-bold text-neutral-500 uppercase tracking-wider">Total Charged:</span>
+              <span className="text-lg font-bold text-black font-nike">${selectedInspectOrder.total.toFixed(2)}</span>
             </div>
 
             <button
               onClick={() => setSelectedInspectOrder(null)}
-              className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-semibold cursor-pointer"
+              className="w-full py-3 bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-neutral-800 transition-colors"
             >
               Close Manifest
             </button>
@@ -2412,51 +2746,125 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* 3. CUSTOMER DETAILS MODAL */}
+      {/* 4. COMPREHENSIVE CUSTOMER PROFILE CRM MODAL */}
       {inspectCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 space-y-5 relative">
-            <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-xl bg-white rounded-2xl border border-neutral-200 shadow-2xl p-6 sm:p-8 space-y-6 relative max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start pb-4 border-b border-neutral-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
+                <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center font-bold text-lg">
                   {inspectCustomer.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">{inspectCustomer.name}</h3>
-                  <span className="text-xs text-slate-400">{inspectCustomer.email}</span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-black text-base">{inspectCustomer.name}</h3>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      inspectCustomer.status === 'VIP' ? 'bg-black text-white' : 'bg-neutral-100 text-black'
+                    }`}>
+                      {inspectCustomer.status || 'ACTIVE'}
+                    </span>
+                  </div>
+                  <span className="text-xs text-neutral-400 block">{inspectCustomer.email}</span>
                 </div>
               </div>
               <button
                 onClick={() => setInspectCustomer(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+                className="p-1.5 text-neutral-400 hover:text-black rounded-lg"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-400">Provider</span>
-                <span className="font-bold uppercase text-slate-800">{inspectCustomer.provider}</span>
+            {/* Profile Overview Grid */}
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Total Spent</span>
+                <span className="font-nike text-lg font-black text-black block mt-0.5">
+                  ${orders.filter(o => o.shippingAddress.fullName.toLowerCase() === inspectCustomer.name.toLowerCase()).reduce((s, o) => s + o.total, inspectCustomer.totalSpent || 0).toFixed(2)}
+                </span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-400">Member Since</span>
-                <span className="font-semibold text-slate-800">{inspectCustomer.joinedDate || '2026-09-01'}</span>
+              <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Orders Placed</span>
+                <span className="font-nike text-lg font-black text-black block mt-0.5">
+                  {orders.filter(o => o.shippingAddress.fullName.toLowerCase() === inspectCustomer.name.toLowerCase()).length || inspectCustomer.totalOrders || 0}
+                </span>
               </div>
-              <div className="flex justify-between py-1">
-                <span className="text-slate-400">Total Purchases</span>
-                <span className="font-bold text-slate-900">
-                  ${orders.filter(o => o.shippingAddress.fullName.toLowerCase() === inspectCustomer.name.toLowerCase()).reduce((s, o) => s + o.total, 0).toFixed(2)}
+              <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Preferred Size</span>
+                <span className="text-xs font-bold text-black block mt-1">
+                  {inspectCustomer.sizePreference || 'L/XL'}
                 </span>
               </div>
             </div>
 
-            <button
-              onClick={() => setInspectCustomer(null)}
-              className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-semibold cursor-pointer"
-            >
-              Close
-            </button>
+            {/* Address & Contact Info */}
+            <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2 text-xs">
+              <span className="font-bold text-neutral-400 uppercase text-[10px] tracking-wider block">Delivery & Contact</span>
+              <div className="flex items-center gap-2 text-neutral-700">
+                <Phone size={13} className="text-neutral-400" />
+                <span>{inspectCustomer.phone || 'No phone recorded'}</span>
+              </div>
+              <div className="flex items-start gap-2 text-neutral-700">
+                <MapPin size={13} className="text-neutral-400 shrink-0 mt-0.5" />
+                <span>{inspectCustomer.address || 'Standard dispatch addresses on file'}</span>
+              </div>
+            </div>
+
+            {/* Past Orders for this Customer */}
+            <div className="space-y-3">
+              <span className="font-bold text-neutral-400 uppercase text-[10px] tracking-wider block">Past Order History</span>
+              {orders.filter(o => o.shippingAddress.fullName.toLowerCase() === inspectCustomer.name.toLowerCase()).length > 0 ? (
+                <div className="divide-y divide-neutral-100 border border-neutral-200 rounded-xl overflow-hidden">
+                  {orders
+                    .filter(o => o.shippingAddress.fullName.toLowerCase() === inspectCustomer.name.toLowerCase())
+                    .map((ord) => (
+                      <div key={ord.id} className="p-3 flex items-center justify-between text-xs hover:bg-neutral-50">
+                        <div>
+                          <span className="font-bold text-black block">{ord.orderNumber}</span>
+                          <span className="text-[10px] text-neutral-400">{ord.date} • {ord.items.length} items</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-black block">${ord.total.toFixed(2)}</span>
+                          <span className="text-[10px] font-bold uppercase">{ord.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-xs text-neutral-400 italic p-3 bg-neutral-50 rounded-xl">No prior order waybills recorded for this client.</p>
+              )}
+            </div>
+
+            {/* Concierge Notes */}
+            {inspectCustomer.notes && (
+              <div className="p-4 bg-neutral-100 rounded-xl text-xs space-y-1">
+                <span className="font-bold text-black uppercase text-[10px] tracking-wider block">Internal Concierge Notes</span>
+                <p className="text-neutral-700 leading-relaxed">{inspectCustomer.notes}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200">
+              <button
+                onClick={() => {
+                  const cust = inspectCustomer;
+                  setInspectCustomer(null);
+                  handleEditCustomer(cust);
+                }}
+                className="px-5 py-2.5 bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-neutral-800 cursor-pointer"
+              >
+                Edit Client Profile
+              </button>
+              <button
+                onClick={() => setInspectCustomer(null)}
+                className="px-5 py-2.5 border border-neutral-300 text-black rounded-full text-xs font-bold uppercase tracking-wider hover:bg-neutral-50 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}

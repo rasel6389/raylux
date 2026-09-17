@@ -1,9 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Order, Product, InventoryItem } from '../types/product';
+import { Order, Product, InventoryItem, HeroBannerConfig, AnnouncementConfig } from '../types/product';
 import { MOCK_ORDERS, MOCK_INVENTORY } from '../data/dashboard';
 import { PRODUCTS } from '../data/products';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+
+export const DEFAULT_HERO_CONFIG: HeroBannerConfig = {
+  badgeText: 'NEW RELEASE // MONOLITH SERIES 2026',
+  badgeActive: true,
+  topRightCaptionLine1: 'ARCHITECTURAL TECHNICAL HEADWEAR',
+  topRightCaptionLine2: 'DESIGNED FOR UNCOMPROMISED PRECISION',
+  superTitle: 'RAYLUX TECHNICAL HEADWEAR LAB',
+  mainTitle: 'ENGINEERED TO LEAD',
+  description: 'Series 01 Architectural Headwear. Bonded waterproof seams, genuine GORE-TEX 3L membranes, and high-density 340 GSM twills designed with relentless discipline.',
+  imageUrl: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=2400&q=85',
+  primaryBtnText: 'SHOP THE COLLECTION',
+  primaryBtnAction: 'shop',
+  secondaryBtnText: 'VIEW 2026 LOOKBOOK',
+  secondaryBtnAction: 'lookbook',
+  secondaryBtnActive: true,
+};
+
+export const DEFAULT_ANNOUNCEMENT_CONFIG: AnnouncementConfig = {
+  active: true,
+  text: 'Members: Complimentary Worldwide Dispatch on orders over $150 • 30-Day Risk-Free Returns.',
+  discountCode: 'MEMBER20',
+  linkText: 'Join or Sign In',
+};
 
 interface StoreContextType {
   orders: Order[];
@@ -19,6 +42,11 @@ interface StoreContextType {
   deleteProduct: (inventoryId: string) => void;
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
+  heroConfig: HeroBannerConfig;
+  updateHeroConfig: (config: Partial<HeroBannerConfig>) => void;
+  resetHeroConfig: () => void;
+  announcementConfig: AnnouncementConfig;
+  updateAnnouncementConfig: (config: Partial<AnnouncementConfig>) => void;
 }
 
 const ORDERS_KEY = 'raylux_orders_v2';
@@ -93,13 +121,56 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [inventory]);
 
-  useEffect(() => {
+  const HERO_CONFIG_KEY = 'raylux_hero_banner_config_v2';
+  const ANNOUNCEMENT_CONFIG_KEY = 'raylux_announcement_config_v2';
+
+  const [heroConfig, setHeroConfig] = useState<HeroBannerConfig>(() => {
     try {
-      localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+      const saved = localStorage.getItem(HERO_CONFIG_KEY);
+      if (saved) return { ...DEFAULT_HERO_CONFIG, ...JSON.parse(saved) };
     } catch {
       // ignore
     }
-  }, [wishlist]);
+    return DEFAULT_HERO_CONFIG;
+  });
+
+  const [announcementConfig, setAnnouncementConfig] = useState<AnnouncementConfig>(() => {
+    try {
+      const saved = localStorage.getItem(ANNOUNCEMENT_CONFIG_KEY);
+      if (saved) return { ...DEFAULT_ANNOUNCEMENT_CONFIG, ...JSON.parse(saved) };
+    } catch {
+      // ignore
+    }
+    return DEFAULT_ANNOUNCEMENT_CONFIG;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HERO_CONFIG_KEY, JSON.stringify(heroConfig));
+    } catch {
+      // ignore
+    }
+  }, [heroConfig]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ANNOUNCEMENT_CONFIG_KEY, JSON.stringify(announcementConfig));
+    } catch {
+      // ignore
+    }
+  }, [announcementConfig]);
+
+  const updateHeroConfig = (config: Partial<HeroBannerConfig>) => {
+    setHeroConfig((prev) => ({ ...prev, ...config }));
+  };
+
+  const resetHeroConfig = () => {
+    setHeroConfig(DEFAULT_HERO_CONFIG);
+  };
+
+  const updateAnnouncementConfig = (config: Partial<AnnouncementConfig>) => {
+    setAnnouncementConfig((prev) => ({ ...prev, ...config }));
+  };
 
   const placeOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'>): Order => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
@@ -348,6 +419,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteProduct,
         toggleWishlist,
         isInWishlist,
+        heroConfig,
+        updateHeroConfig,
+        resetHeroConfig,
+        announcementConfig,
+        updateAnnouncementConfig,
       }}
     >
       {children}

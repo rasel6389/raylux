@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 export type PageRoute = 'home' | 'shop' | 'pdp' | 'dashboard' | 'checkout' | 'lookbook' | 'admin';
 export type DashboardTab = 'user' | 'wishlist' | 'addresses' | 'payments' | 'settings' | 'orders' | 'tickets';
-export type AdminTab = 'overview' | 'orders' | 'inventory' | 'customers' | 'dispatches' | 'discounts' | 'support' | 'ai_agent' | 'settings';
+export type AdminTab = 'overview' | 'orders' | 'inventory' | 'hero_cms' | 'customers' | 'dispatches' | 'discounts' | 'support' | 'ai_agent' | 'settings';
 
 interface NavigationContextType {
   currentPage: PageRoute;
@@ -61,6 +61,7 @@ const parseInitialRoute = (): {
         'overview',
         'orders',
         'inventory',
+        'hero_cms',
         'customers',
         'dispatches',
         'discounts',
