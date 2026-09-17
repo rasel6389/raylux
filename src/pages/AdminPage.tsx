@@ -1,11 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigation } from '../context/NavigationContext';
+import { useNavigation, AdminTab } from '../context/NavigationContext';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Order } from '../types/product';
 import { ProductModal } from '../components/admin/ProductModal';
 import {
-  Lock,
   LayoutDashboard,
   ShoppingBag,
   Package,
@@ -17,10 +16,10 @@ import {
   Plus,
   RefreshCw,
   LogOut,
-  ArrowLeft,
   KeyRound,
   Trash2,
   Eye,
+  EyeOff,
   X,
   Printer,
   ChevronRight,
@@ -36,13 +35,14 @@ import {
   Send,
   Coins,
   Globe,
+  ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useTickets } from '../context/TicketContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { getAIAgentConfig, saveAIAgentConfig, askGeminiAgent } from '../services/aiAgent';
 import { AIAgentConfig, SupportTicket } from '../types/ticket';
-
-type AdminTab = 'overview' | 'orders' | 'inventory' | 'customers' | 'dispatches' | 'discounts' | 'support' | 'ai_agent' | 'settings';
 
 interface PromoCodeItem {
   code: string;
@@ -60,17 +60,21 @@ const DEFAULT_PROMO_CODES: PromoCodeItem[] = [
 ];
 
 export const AdminPage: React.FC = () => {
-  const { isAdminLoggedIn, loginAdmin, logoutAdmin, goToHome } = useNavigation();
+  const { isAdminLoggedIn, loginAdmin, logoutAdmin, goToHome, adminTab, setAdminTab } = useNavigation();
   const { orders, inventory, updateOrderStatus, updateOrderTracking, addProduct, restockProduct, deleteProduct } = useStore();
   const { registeredUsers } = useAuth();
 
   // Login form state
   const [email, setEmail] = useState('admin@raylux.com');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Active Admin Tab & Mobile Sidebar Toggle
-  const [activeTab, setActiveTab] = useState<AdminTab>('orders');
+  // Active Admin Tab & Mobile Sidebar Toggle (synced with browser URL)
+  const activeTab: AdminTab = adminTab || 'overview';
+  const setActiveTab = (tab: AdminTab) => {
+    setAdminTab(tab);
+  };
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Search & Filters
@@ -83,6 +87,20 @@ export const AdminPage: React.FC = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedInspectOrder, setSelectedInspectOrder] = useState<Order | null>(null);
   const [inspectCustomer, setInspectCustomer] = useState<(typeof registeredUsers)[0] | null>(null);
+
+  // Copy feedback state
+  const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
+
+  // Real-time operations clock ticker
+  const [currentTime, setCurrentTime] = useState(() =>
+    new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  );
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Contexts for Tickets & Currency
   const { tickets, updateTicketStatus, addReply } = useTickets();
@@ -113,6 +131,17 @@ export const AdminPage: React.FC = () => {
   const showNotice = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleCopyOrderId = (orderNum: string) => {
+    try {
+      navigator.clipboard.writeText(orderNum);
+      setCopiedOrderId(orderNum);
+      showNotice(`Copied ${orderNum} to clipboard!`);
+      setTimeout(() => setCopiedOrderId(null), 2000);
+    } catch {
+      // fallback
+    }
   };
 
   // Promo Codes State (Persisted)
@@ -336,97 +365,115 @@ export const AdminPage: React.FC = () => {
     showNotice('Orders CSV Manifest exported!');
   };
 
-  // 1. ADMIN AUTHENTICATION GATE
+  // 1. ADMIN AUTHENTICATION GATE (EXECUTIVE OBSIDIAN TERMINAL)
   if (!isAdminLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#f7f7f8] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white border border-neutral-200 rounded-3xl p-8 sm:p-10 space-y-7 shadow-xl">
+      <div className="min-h-screen bg-[#0a0a0d] text-white flex items-center justify-center p-4 relative overflow-hidden font-sans">
+        {/* Subtle Ambient Radial Glow */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-neutral-800/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="max-w-md w-full bg-[#121216] border border-neutral-800 rounded-3xl p-8 sm:p-10 space-y-7 shadow-2xl relative z-10">
           
-          <div className="text-center space-y-2.5">
-            <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mx-auto shadow-sm">
-              <Lock size={26} />
+          {/* Header */}
+          <div className="text-center space-y-3">
+            <div className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-white/5">
+              <ShieldCheck size={28} />
             </div>
             <div>
-              <span className="text-[11px] font-sans font-bold tracking-widest text-neutral-400 uppercase">
-                INTERNAL OPERATIONS
-              </span>
-              <h2 className="font-nike text-4xl sm:text-5xl font-black uppercase text-black tracking-tight mt-0.5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-mono font-bold tracking-widest text-neutral-300 uppercase mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>SECURITY CLEARANCE // LEVEL 4</span>
+              </div>
+              <h2 className="font-nike text-4xl sm:text-5xl font-black uppercase text-white tracking-tight leading-none">
                 RAYLUX OPERATIONS
               </h2>
             </div>
-            <p className="text-xs font-sans text-neutral-500">
-              Manage fulfillment, batch inventory, and client telemetry.
+            <p className="text-xs text-neutral-400 max-w-xs mx-auto leading-relaxed">
+              Global fulfillment console, live dispatch waybills, and client care triage.
             </p>
           </div>
 
-          {/* Demo Credentials Box */}
-          <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-2xl space-y-2 text-xs">
-            <div className="flex items-center gap-1.5 font-bold text-neutral-800">
-              <KeyRound size={14} className="text-black" />
-              <span className="font-sans uppercase tracking-wider">Demo Credentials:</span>
-            </div>
-            <div className="font-sans text-neutral-600 space-y-0.5 text-xs">
-              <p>Email: <strong className="text-black font-semibold">admin@raylux.com</strong></p>
-              <p>Password: <strong className="text-black font-semibold">raylux2026</strong> (or <strong className="text-black font-semibold">admin</strong>)</p>
+          {/* Clean Demo Credentials Pill */}
+          <div className="p-3.5 bg-neutral-900/90 border border-neutral-800 rounded-2xl flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <KeyRound size={14} className="text-emerald-400" />
+              </div>
+              <div>
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Demo Passcode</span>
+                <span className="font-mono font-bold text-white tracking-wide">raylux2026</span>
+              </div>
             </div>
             <button
               type="button"
               onClick={handleQuickDemoFill}
-              className="w-full mt-1.5 py-2.5 bg-black text-white hover:bg-neutral-800 font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="px-3.5 py-1.5 bg-white text-black hover:bg-neutral-200 text-xs font-bold uppercase tracking-wider rounded-full transition-all shadow-xs"
             >
-              <span>Click for 1-Click Demo Login</span>
+              Quick Login
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-4 text-xs font-sans">
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="space-y-4 text-xs">
             <div>
-              <label className="block font-bold uppercase text-neutral-700 mb-1.5 tracking-wider">
-                Admin Email
+              <label className="block font-bold uppercase text-neutral-300 mb-1.5 tracking-wider text-[11px]">
+                Operator Account
               </label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-neutral-50 border border-neutral-300 px-4 py-3 text-sm text-black focus:outline-none focus:border-black rounded-xl"
+                className="w-full bg-[#1b1b22] border border-neutral-750 focus:border-white px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none rounded-xl transition-colors font-mono"
               />
             </div>
 
             <div>
-              <label className="block font-bold uppercase text-neutral-700 mb-1.5 tracking-wider">
-                Security Password
+              <label className="block font-bold uppercase text-neutral-300 mb-1.5 tracking-wider text-[11px]">
+                Security Passcode
               </label>
-              <input
-                type="password"
-                required
-                placeholder="Enter password..."
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-neutral-50 border border-neutral-300 px-4 py-3 text-sm text-black focus:outline-none focus:border-black rounded-xl"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Enter passcode..."
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-[#1b1b22] border border-neutral-750 focus:border-white pl-4 pr-10 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none rounded-xl transition-colors font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {errorMsg && (
-              <p className="text-red-600 font-semibold text-xs bg-red-50 p-2.5 rounded-xl border border-red-200">
+              <p className="text-red-400 font-semibold text-xs bg-red-950/60 p-3 rounded-xl border border-red-800">
                 {errorMsg}
               </p>
             )}
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-black text-white font-sans text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-800 transition-colors shadow-md"
+              className="w-full py-3.5 bg-white text-black font-sans text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors shadow-lg shadow-white/10"
             >
-              SIGN IN TO CONSOLE
+              AUTHENTICATE & ACCESS CONSOLE
             </button>
           </form>
 
-          <div className="pt-2 text-center border-t border-neutral-100">
+          {/* Footer Back Link */}
+          <div className="pt-2 text-center border-t border-neutral-850 flex items-center justify-center">
             <button
               onClick={goToHome}
-              className="text-xs font-bold uppercase tracking-wider text-neutral-500 hover:text-black transition-colors"
+              className="text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5"
             >
-              ← Return to Storefront
+              <ExternalLink size={13} />
+              <span>Return to Customer Storefront</span>
             </button>
           </div>
 
@@ -734,14 +781,15 @@ export const AdminPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={goToHome}
-                className="py-2 px-2 bg-white hover:bg-black hover:text-white text-black rounded-full text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 border border-neutral-200 shadow-xs"
+                className="py-2 px-2 bg-black text-white hover:bg-neutral-800 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                title="Return to Customer Storefront"
               >
-                <ArrowLeft size={12} />
+                <ExternalLink size={12} />
                 <span>Storefront</span>
               </button>
               <button
                 onClick={logoutAdmin}
-                className="py-2 px-2 bg-white hover:bg-red-600 hover:text-white text-black rounded-full text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 border border-neutral-200 shadow-xs"
+                className="py-2 px-2 bg-white hover:bg-red-600 hover:text-white text-neutral-700 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 border border-neutral-200 shadow-xs"
               >
                 <LogOut size={12} />
                 <span>Sign Out</span>
@@ -756,23 +804,35 @@ export const AdminPage: React.FC = () => {
       {/* MAIN WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0">
         
-        {/* Top Header Utility Bar */}
-        <header className="h-16 bg-white/90 backdrop-blur-md border-b border-neutral-200 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
+        {/* Top Header Utility Bar (Executive Flight Deck) */}
+        <header className="h-16 bg-white/95 backdrop-blur-md border-b border-neutral-200 px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
           
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
               className="lg:hidden p-2 text-black hover:bg-neutral-100 rounded-lg"
+              aria-label="Open Navigation Sidebar"
             >
               <Menu size={18} />
             </button>
 
+            {/* Breadcrumb Hierarchy */}
+            <div className="hidden xl:flex items-center gap-2 text-xs font-sans">
+              <span className="text-neutral-400 font-bold uppercase tracking-wider">RAYLUX</span>
+              <span className="text-neutral-300 font-bold">/</span>
+              <span className="text-neutral-400 font-bold uppercase tracking-wider">OPS</span>
+              <span className="text-neutral-300 font-bold">/</span>
+              <span className="text-black font-black uppercase tracking-wider">
+                {activeTab.replace('_', ' ')}
+              </span>
+            </div>
+
             {/* Global Search Bar */}
-            <div className="relative w-64 sm:w-80 md:w-96">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <div className="relative w-52 sm:w-72 md:w-80">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
               <input
                 type="text"
-                placeholder="Search orders, SKU specs, clients, or waybills..."
+                placeholder="Search orders, SKU specs, clients, waybills..."
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 className="w-full bg-neutral-50 border border-neutral-200 rounded-full pl-9 pr-8 py-2 text-xs font-sans text-black placeholder:text-neutral-400 focus:outline-none focus:border-black transition-colors"
@@ -788,22 +848,58 @@ export const AdminPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Clean Top Action Buttons (Single source, no duplicates) */}
-          <div className="flex items-center gap-2.5">
+          {/* Right Flight Deck Actions */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            
+            {/* Live Sync Indicator */}
+            <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>LIVE SYNC</span>
+            </div>
+
+            {/* Real-time Clock */}
+            <div className="hidden md:flex items-center gap-1 text-[11px] font-mono font-bold text-neutral-500 px-2.5 py-1 bg-neutral-100 rounded-full border border-neutral-200">
+              <Clock size={12} className="text-neutral-400" />
+              <span>{currentTime}</span>
+            </div>
+
+            {/* Currency Rate Widget */}
             <button
-              onClick={() => setIsProductModalOpen(true)}
-              className="px-4 py-2 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+              onClick={() => setActiveTab('settings')}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-full text-[11px] font-bold text-neutral-700 transition-colors"
+              title="Click to configure live exchange rate"
             >
-              <Plus size={13} />
-              <span>Add Product Spec</span>
+              <Coins size={12} className="text-black" />
+              <span>1 USD = £{exchangeRate.toFixed(2)} GBP</span>
             </button>
 
+            {/* Prominent Live Storefront Button */}
+            <button
+              onClick={goToHome}
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-neutral-100 hover:bg-black hover:text-white text-black border border-neutral-200 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+              title="Navigate to Customer Storefront"
+            >
+              <ExternalLink size={13} />
+              <span>Storefront</span>
+            </button>
+
+            {/* Add Product Spec Button */}
+            <button
+              onClick={() => setIsProductModalOpen(true)}
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+            >
+              <Plus size={13} />
+              <span className="hidden sm:inline">Add Spec</span>
+            </button>
+
+            {/* Export Manifest CSV */}
             <button
               onClick={handleExportCSV}
-              className="px-4 py-2 bg-white hover:border-black text-black border border-neutral-200 rounded-full text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+              className="p-2 sm:px-4 sm:py-2 bg-white hover:border-black text-black border border-neutral-200 rounded-full text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+              title="Export Orders Manifest CSV"
             >
               <Download size={13} />
-              <span className="hidden sm:inline">Export Manifest</span>
+              <span className="hidden xl:inline">Export</span>
             </button>
           </div>
 
@@ -829,6 +925,67 @@ export const AdminPage: React.FC = () => {
                 <div className="text-xs font-sans font-bold text-neutral-500 uppercase tracking-wider">
                   DISPATCH SYSTEM // ACTIVE
                 </div>
+              </div>
+
+              {/* Executive Quick Actions Bar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button
+                  onClick={() => setIsProductModalOpen(true)}
+                  className="p-3.5 bg-black text-white hover:bg-neutral-800 rounded-2xl text-left transition-all shadow-xs flex items-center justify-between group"
+                >
+                  <div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Product Spec</span>
+                    <span className="font-nike text-lg font-black uppercase tracking-tight">+ Create SKU</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Plus size={15} />
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className="p-3.5 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-2xl text-left transition-all shadow-xs flex items-center justify-between group"
+                >
+                  <div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Fulfillment</span>
+                    <span className="font-nike text-lg font-black uppercase tracking-tight text-black">{orders.length} Dispatches</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ShoppingBag size={15} className="text-black" />
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('support')}
+                  className="p-3.5 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-2xl text-left transition-all shadow-xs flex items-center justify-between group"
+                >
+                  <div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Client Concierge</span>
+                    <span className="font-nike text-lg font-black uppercase tracking-tight text-black">
+                      {openTicketsCount} Open Tickets
+                    </span>
+                  </div>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${
+                    openTicketsCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-black'
+                  }`}>
+                    <LifeBuoy size={15} />
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('ai_agent')}
+                  className="p-3.5 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-2xl text-left transition-all shadow-xs flex items-center justify-between group"
+                >
+                  <div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Gemini 3.8 AI</span>
+                    <span className="font-nike text-lg font-black uppercase tracking-tight text-black">
+                      {aiConfig.enabled ? 'Agent Active' : 'Agent Paused'}
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Bot size={15} />
+                  </div>
+                </button>
               </div>
 
               {/* 4 Primary Nike-Style Metric Cards */}
@@ -1143,25 +1300,53 @@ export const AdminPage: React.FC = () => {
                         filteredOrders.map((ord) => (
                           <tr key={ord.id} className="hover:bg-neutral-50/80 transition-colors">
                             <td className="py-4 px-6 whitespace-nowrap">
-                              <span className="font-mono text-sm font-black text-black block">
-                                {ord.orderNumber}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-sm font-black text-black">
+                                  {ord.orderNumber}
+                                </span>
+                                <button
+                                  onClick={() => handleCopyOrderId(ord.orderNumber)}
+                                  className="p-1 text-neutral-400 hover:text-black transition-colors rounded"
+                                  title="Copy Order Reference"
+                                >
+                                  {copiedOrderId === ord.orderNumber ? (
+                                    <Check size={12} className="text-emerald-600" />
+                                  ) : (
+                                    <Copy size={12} />
+                                  )}
+                                </button>
+                              </div>
                               <span className="text-[11px] text-neutral-400 font-sans font-medium mt-0.5 block">
                                 {ord.date}
                               </span>
                             </td>
 
                             <td className="py-4 px-6">
-                              <p className="font-bold text-black">{ord.shippingAddress.fullName}</p>
-                              <p className="text-[11px] text-neutral-500">{ord.shippingAddress.city}, {ord.shippingAddress.country}</p>
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-xs font-bold text-black font-nike shrink-0">
+                                  {ord.shippingAddress.fullName.charAt(0)}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-black">{ord.shippingAddress.fullName}</p>
+                                  <p className="text-[11px] text-neutral-500">{ord.shippingAddress.city}, {ord.shippingAddress.country}</p>
+                                </div>
+                              </div>
                             </td>
 
                             <td className="py-4 px-6">
-                              <div className="space-y-1">
+                              <div className="space-y-1.5">
                                 {ord.items.map((item, idx) => (
-                                  <p key={idx} className="text-neutral-700 leading-snug">
-                                    <strong className="text-black">{item.quantity}x</strong> {item.productName} ({item.size})
-                                  </p>
+                                  <div key={idx} className="flex items-center gap-2">
+                                    {item.image && (
+                                      <img src={item.image} alt={item.productName} className="w-6 h-6 rounded object-cover border border-neutral-200 shrink-0" />
+                                    )}
+                                    <p className="text-neutral-700 text-xs leading-snug">
+                                      <strong className="text-black">{item.quantity}x</strong> {item.productName}{' '}
+                                      <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200 ml-1">
+                                        {item.size}
+                                      </span>
+                                    </p>
+                                  </div>
                                 ))}
                               </div>
                             </td>
@@ -1182,11 +1367,17 @@ export const AdminPage: React.FC = () => {
                                   updateOrderStatus(ord.id, e.target.value as Order['status']);
                                   showNotice(`Order ${ord.orderNumber} updated to ${e.target.value}!`);
                                 }}
-                                className="text-xs font-bold px-3 py-1.5 rounded-full border border-neutral-300 focus:border-black focus:outline-none cursor-pointer uppercase bg-white shadow-xs"
+                                className={`text-xs font-bold px-3 py-1.5 rounded-full border focus:outline-none cursor-pointer uppercase shadow-xs transition-colors ${
+                                  ord.status === 'DELIVERED'
+                                    ? 'bg-black text-white border-black'
+                                    : ord.status === 'IN TRANSIT'
+                                    ? 'bg-blue-50 text-blue-900 border-blue-200'
+                                    : 'bg-amber-50 text-amber-900 border-amber-200'
+                                }`}
                               >
-                                <option value="PROCESSING">Processing</option>
-                                <option value="IN TRANSIT">In Transit</option>
-                                <option value="DELIVERED">Delivered</option>
+                                <option value="PROCESSING" className="bg-white text-black">Processing</option>
+                                <option value="IN TRANSIT" className="bg-white text-black">In Transit</option>
+                                <option value="DELIVERED" className="bg-white text-black">Delivered</option>
                               </select>
                             </td>
 
