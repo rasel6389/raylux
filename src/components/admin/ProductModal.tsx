@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InventoryItem, CapCategory } from '../../types/product';
-import { X, Check, Image as ImageIcon, Edit3, Plus } from 'lucide-react';
+import { X, Check, Image as ImageIcon, Edit3, Package } from 'lucide-react';
 
 export interface ProductModalPayload {
   name: string;
@@ -39,8 +39,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [category, setCategory] = useState<CapCategory>('STRUCTURED');
-  const [profile, setProfile] = useState('6-PANEL HIGH');
-  const [material, setMaterial] = useState('HEAVY TWILL');
+  const [profile, setProfile] = useState('6-Panel High Crown');
+  const [material, setMaterial] = useState('Heavy Twill');
   const [price, setPrice] = useState('85');
   const [stock, setStock] = useState('30');
   const [reorderPoint, setReorderPoint] = useState('15');
@@ -54,8 +54,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setName(initialData.name || '');
       setSku(initialData.sku || '');
       setCategory(initialData.category || 'STRUCTURED');
-      setProfile(initialData.profile || '6-PANEL HIGH');
-      setMaterial(initialData.material || 'HEAVY TWILL');
+      setProfile(initialData.profile || '6-Panel High Crown');
+      setMaterial(initialData.material || 'Heavy Twill');
       setPrice(initialData.price?.toString() || '85');
       setStock(initialData.stock?.toString() || '30');
       setReorderPoint(initialData.reorderPoint?.toString() || '15');
@@ -65,8 +65,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setName('');
       setSku('');
       setCategory('STRUCTURED');
-      setProfile('6-PANEL HIGH');
-      setMaterial('HEAVY TWILL');
+      setProfile('6-Panel High Crown');
+      setMaterial('Heavy Twill');
       setPrice('85');
       setStock('30');
       setReorderPoint('15');
@@ -86,10 +86,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     const parsedReorder = parseInt(reorderPoint, 10) || 12;
 
     onSave({
-      name: name.toUpperCase().trim(),
+      name: name.trim(),
       sku: sku.toUpperCase().trim(),
       category,
-      material: material.toUpperCase().trim(),
+      material: material.trim(),
       price: parsedPrice,
       stock: parsedStock,
       reorderPoint: parsedReorder,
@@ -103,70 +103,57 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn font-sans">
-      <div className="w-full max-w-xl bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+      <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/80 shadow-2xl relative max-h-[92vh] flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="flex justify-between items-start pb-4 border-b border-neutral-200">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
-                DEPOT MATRIX CATALOG
-              </span>
-              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${
-                isEditMode ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-800'
-              }`}>
-                {isEditMode ? 'EDIT MODE' : 'NEW SPEC'}
-              </span>
+        <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              isEditMode ? 'bg-amber-100 text-amber-700' : 'bg-slate-900 text-white'
+            }`}>
+              {isEditMode ? <Edit3 size={18} /> : <Package size={18} />}
             </div>
-
-            <h3 className="font-nike text-2xl sm:text-3xl font-black uppercase text-black leading-tight flex items-center gap-2">
-              {isEditMode ? (
-                <>
-                  <Edit3 size={24} className="text-black" />
-                  <span>EDIT SPEC // {initialData?.sku}</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={24} className="text-black" />
-                  <span>REGISTER NEW HEADWEAR SPEC</span>
-                </>
-              )}
-            </h3>
-            <p className="text-xs text-neutral-500">
-              {isEditMode
-                ? 'Update catalog parameters, textile materials, stock allocation, and pricing.'
-                : 'Create product specification with synchronized Tokyo & Berlin warehouse allocation.'}
-            </p>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                {isEditMode ? `Edit Product — ${initialData?.sku}` : 'Add New Product'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {isEditMode
+                  ? 'Update product details, pricing, inventory stock, and textile specifications.'
+                  : 'Register a new headwear silhouette to the active store catalog.'}
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-neutral-400 hover:text-black rounded-full hover:bg-neutral-100 transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 text-xs font-sans">
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
           
           {/* Name & SKU */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                PRODUCT SILHOUETTE NAME
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Product Title <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. MONOLITH 04 // GRAPHITE"
+                placeholder="e.g. Monolith 04 Hat"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 uppercase font-medium text-xs focus:outline-none focus:border-black"
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
               />
             </div>
             <div>
-              <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                SKU IDENTIFIER SPEC
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                SKU Identifier <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -174,64 +161,67 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 placeholder="e.g. RLX-SPEC-240"
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
-                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 font-mono text-xs uppercase focus:outline-none focus:border-black"
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all uppercase font-medium"
               />
             </div>
           </div>
 
-          {/* Category & Silhouette Profile */}
+          {/* Category & Crown Profile */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                CATEGORY CLASSIFICATION
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Category
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as CapCategory)}
-                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black bg-white"
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
               >
-                <option value="STRUCTURED">STRUCTURED 6-PANEL</option>
-                <option value="TECHNICAL">TECHNICAL GORE-TEX</option>
-                <option value="CAMP_CAP">CORDURA 5-PANEL CAMP</option>
-                <option value="RUNNER">AERORUNNER SPEED</option>
-                <option value="COLLABORATION">COLLABORATION SPECIAL</option>
+                <option value="STRUCTURED">Structured 6-Panel</option>
+                <option value="TECHNICAL">Technical GORE-TEX</option>
+                <option value="CAMP_CAP">Cordura 5-Panel Camp</option>
+                <option value="RUNNER">AeroRunner Speed</option>
+                <option value="COLLABORATION">Special Collaboration</option>
               </select>
             </div>
             <div>
-              <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                SILHOUETTE CROWN
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Fit & Crown Profile
               </label>
               <select
                 value={profile}
                 onChange={(e) => setProfile(e.target.value)}
-                className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black bg-white"
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
               >
-                <option value="6-PANEL HIGH">6-PANEL HIGH CROWN</option>
-                <option value="5-PANEL LOW">5-PANEL LOW PROFILE</option>
-                <option value="UNSTRUCTURED RUNNER">UNSTRUCTURED RUNNER</option>
+                <option value="6-Panel High Crown">6-Panel High Crown</option>
+                <option value="5-Panel Low Profile">5-Panel Low Profile</option>
+                <option value="Unstructured Runner">Unstructured Runner</option>
               </select>
             </div>
           </div>
 
-          {/* Pricing & Stock Numbers */}
+          {/* Pricing, Stock & Reorder */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                PRICE ($ USD)
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Price ($ USD) <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="number"
-                required
-                min="10"
-                step="5"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-400 text-sm">$</span>
+                <input
+                  type="number"
+                  required
+                  min="5"
+                  step="1"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="w-full bg-slate-50/60 border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
+                />
+              </div>
             </div>
             <div>
-              <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                {isEditMode ? 'CURRENT STOCK' : 'INITIAL UNITS'}
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                {isEditMode ? 'Current Stock' : 'Stock Units'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
@@ -239,12 +229,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 min="0"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
-                className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
               />
             </div>
             <div>
-              <label className="block font-semibold uppercase text-neutral-700 mb-1">
-                REORDER POINT
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Reorder Alert At
               </label>
               <input
                 type="number"
@@ -252,32 +242,32 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 min="1"
                 value={reorderPoint}
                 onChange={(e) => setReorderPoint(e.target.value)}
-                className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-black"
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
               />
             </div>
           </div>
 
-          {/* Textile Material */}
+          {/* Textile / Material */}
           <div>
-            <label className="block font-semibold uppercase text-neutral-700 mb-1">
-              PRIMARY TEXTILE SPECIFICATION
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Fabric & Material Specification <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               required
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
-              placeholder="e.g. GORE-TEX 3L PRO"
-              className="w-full border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs uppercase font-medium focus:outline-none focus:border-black"
+              placeholder="e.g. GORE-TEX 3L Pro / 100% Heavy Twill"
+              className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all font-medium"
             />
           </div>
 
-          {/* Imagery selection */}
+          {/* Product Image */}
           <div className="space-y-2">
-            <label className="block font-semibold uppercase text-neutral-700">
-              STUDIO CATALOG IMAGE
+            <label className="block text-xs font-semibold text-slate-700">
+              Product Image Preview
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2.5">
               {PRESET_IMAGES.map((preset) => {
                 const isSelected = imageUrl === preset.url;
                 return (
@@ -285,14 +275,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     key={preset.label}
                     type="button"
                     onClick={() => setImageUrl(preset.url)}
-                    className={`aspect-square rounded-xl overflow-hidden border-2 relative transition-all ${
-                      isSelected ? 'border-black ring-2 ring-black' : 'border-neutral-200 opacity-70 hover:opacity-100'
+                    className={`aspect-square rounded-xl overflow-hidden border-2 relative transition-all group ${
+                      isSelected ? 'border-slate-900 ring-2 ring-slate-900/20' : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-slate-400'
                     }`}
                   >
-                    <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
-                    <span className="absolute bottom-1 left-1 right-1 text-[9px] font-bold text-center bg-black/75 text-white truncate px-1 rounded">
-                      {preset.label.split(' ')[0]}
+                    <img src={preset.url} alt={preset.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <span className="absolute bottom-1 left-1 right-1 text-[10px] font-medium text-center bg-slate-950/80 text-white truncate px-1 py-0.5 rounded backdrop-blur-xs">
+                      {preset.label}
                     </span>
+                    {isSelected && (
+                      <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">
+                        ✓
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -303,40 +298,41 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 placeholder="Or paste custom image URL..."
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full border border-neutral-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-black pl-8"
+                className="w-full bg-slate-50/60 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
               />
-              <ImageIcon size={14} className="absolute left-2.5 top-3.5 text-neutral-400" />
+              <ImageIcon size={16} className="absolute left-3 top-3.5 text-slate-400" />
             </div>
           </div>
 
+          {/* Product Description */}
           <div>
-            <label className="block font-semibold uppercase text-neutral-700 mb-1">
-              EDITORIAL DESCRIPTION (OPTIONAL)
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Product Description (Optional)
             </label>
             <textarea
               rows={2}
-              placeholder="e.g. Engineered structural cap crafted from waterproof materials..."
+              placeholder="Crafted from premium water-repellent materials with custom hardware..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-neutral-300 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-black font-sans"
+              className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-4 flex justify-end gap-3 border-t border-neutral-200">
+          {/* Actions */}
+          <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 border border-neutral-300 rounded-full uppercase font-sans text-xs font-bold text-neutral-700 hover:border-black hover:text-black transition-colors"
+              className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-semibold text-xs transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-8 py-3 bg-black text-white rounded-full uppercase font-sans text-xs font-bold hover:bg-neutral-800 transition-all shadow-md flex items-center gap-2"
+              className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-semibold text-xs hover:bg-slate-800 transition-all shadow-sm hover:shadow flex items-center gap-2"
             >
               <Check size={14} />
-              <span>{isEditMode ? 'Update & Save Spec' : 'Save & Publish Spec'}</span>
+              <span>{isEditMode ? 'Update Product' : 'Publish Product'}</span>
             </button>
           </div>
 
