@@ -1,12 +1,15 @@
 import React from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { StoreProvider } from './context/StoreContext';
+import { CurrencyProvider } from './context/CurrencyContext';
+import { TicketProvider } from './context/TicketContext';
 import { CartProvider } from './context/CartContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { CartDrawer } from './components/common/CartDrawer';
 import { AuthModal } from './components/common/AuthModal';
+import { AIAgentWidget } from './components/common/AIAgentWidget';
 import { HomePage } from './pages/HomePage';
 import { ShopPage } from './pages/ShopPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
@@ -20,9 +23,10 @@ const AppContent: React.FC = () => {
 
   if (currentPage === 'checkout') {
     return (
-      <div className="min-h-screen bg-white text-black font-sans">
+      <div className="min-h-screen bg-white text-black font-sans relative">
         <CheckoutPage />
         <AuthModal />
+        <AIAgentWidget />
       </div>
     );
   }
@@ -37,7 +41,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-black font-sans">
+    <div className="min-h-screen flex flex-col bg-white text-black font-sans relative">
       <Navbar />
       <main className="flex-1">
         {currentPage === 'home' && <HomePage />}
@@ -49,6 +53,7 @@ const AppContent: React.FC = () => {
       <CartDrawer />
       <Footer />
       <AuthModal />
+      <AIAgentWidget />
     </div>
   );
 };
@@ -56,16 +61,19 @@ const AppContent: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <StoreProvider>
-        <NavigationProvider>
-          <CartProvider>
-            <AppContent />
-          </CartProvider>
-        </NavigationProvider>
-      </StoreProvider>
+      <CurrencyProvider>
+        <TicketProvider>
+          <StoreProvider>
+            <NavigationProvider>
+              <CartProvider>
+                <AppContent />
+              </CartProvider>
+            </NavigationProvider>
+          </StoreProvider>
+        </TicketProvider>
+      </CurrencyProvider>
     </AuthProvider>
   );
 };
 
 export default App;
-

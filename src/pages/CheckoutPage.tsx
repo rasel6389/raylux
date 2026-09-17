@@ -3,6 +3,7 @@ import { useCart } from '../context/CartContext';
 import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { ArrowLeft, CheckCircle2, CreditCard, ShieldCheck, Lock, Truck, ArrowRight, Package } from 'lucide-react';
 
 export const CheckoutPage: React.FC = () => {
@@ -10,6 +11,7 @@ export const CheckoutPage: React.FC = () => {
   const { goToHome, goToShop, goToDashboard } = useNavigation();
   const { currentUser, openAuthModal } = useAuth();
   const { placeOrder } = useStore();
+  const { formatPrice, convertPrice, currency, exchangeRate } = useCurrency();
 
   const nameParts = currentUser ? currentUser.name.split(' ') : ['Marcus', 'Vance'];
 
@@ -43,10 +45,16 @@ export const CheckoutPage: React.FC = () => {
     }
   }, [currentUser]);
 
-  // Shipping rates
-  const shippingCost = shippingSpeed === 'standard' ? (subtotal >= 150 ? 0 : 12) : shippingSpeed === 'express' ? 18 : 28;
-  const estimatedTax = (finalTotal * 0.088);
-  const grandTotal = finalTotal + shippingCost + estimatedTax;
+  // Shipping rates in base USD
+  const shippingThresholdUSD = 150;
+  const standardRateUSD = 12;
+  const expressRateUSD = 18;
+  const priorityRateUSD = 28;
+
+  const shippingCostUSD = shippingSpeed === 'standard' ? (subtotal >= shippingThresholdUSD ? 0 : standardRateUSD) : shippingSpeed === 'express' ? expressRateUSD : priorityRateUSD;
+  const estimatedTaxUSD = finalTotal * 0.088;
+  const grandTotalUSD = finalTotal + shippingCostUSD + estimatedTaxUSD;
+  const convertedGrandTotal = convertPrice(grandTotalUSD);
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +76,9 @@ export const CheckoutPage: React.FC = () => {
         userId: currentUser?.id,
         userEmail: email,
         status: 'PROCESSING',
-        total: grandTotal,
+        total: convertedGrandTotal,
+        currency: currency,
+        currencyRate: exchangeRate,
         trackingNumber: `1Z999${Math.floor(100000000000 + Math.random() * 900000000000)}`,
         carrier: carrierName,
         estimatedDelivery: estDelivery,
@@ -84,7 +94,7 @@ export const CheckoutPage: React.FC = () => {
           productName: item.product.name,
           sku: item.product.sku,
           image: item.product.images[0],
-          price: item.product.price,
+          price: convertPrice(item.product.price),
           size: item.selectedSize,
           color: item.selectedColor,
           quantity: item.quantity,
@@ -128,7 +138,7 @@ export const CheckoutPage: React.FC = () => {
               </div>
               <div className="text-right">
                 <span className="text-xs text-neutral-500 uppercase">TOTAL BILLED</span>
-                <p className="font-sans text-base font-bold text-black">${grandTotal.toFixed(2)} USD</p>
+                <p className="font-sans text-base font-bold text-black">{formatPrice(grandTotalUSD)} {currency}</p>
               </div>
             </div>
 
@@ -423,11 +433,11 @@ export const CheckoutPage: React.FC = () => {
                         />
                         <div>
                           <p className="text-black">Standard Ground Delivery (3-5 Business Days)</p>
-                          <p className="text-xs text-neutral-500 font-normal">Complimentary on orders over $150</p>
+                          <p className="text-xs text-neutral-500 font-normal">Complimentary on orders over {formatPrice(shippingThresholdUSD)}</p>
                         </div>
                       </div>
                       <span className="font-bold text-black">
-                        {subtotal >= 150 ? 'FREE' : '$12.00'}
+                        {subtotal >= shippingThresholdUSD ? 'FREE' : formatPrice(standardRateUSD)}
                       </span>
                     </label>
 
@@ -450,7 +460,7 @@ export const CheckoutPage: React.FC = () => {
                           <p className="text-xs text-neutral-500 font-normal">Tracked priority via DHL Express</p>
                         </div>
                       </div>
-                      <span className="font-bold text-black">$18.00</span>
+                      <span className="font-bold text-black">{formatPrice(expressRateUSD)}</span>
                     </label>
 
                     <label
@@ -472,7 +482,7 @@ export const CheckoutPage: React.FC = () => {
                           <p className="text-xs text-neutral-500 font-normal">Guaranteed delivery by 10:30 AM</p>
                         </div>
                       </div>
-                      <span className="font-bold text-black">$28.00</span>
+                      <span className="font-bold text-black">{formatPrice(priorityRateUSD)}</span>
                     </label>
                   </div>
                 </div>
@@ -548,7 +558,7 @@ export const CheckoutPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="p-4 bg-pink-50 border border-pink-200 font-sans text-xs text-neutral-700 space-y-1">
-                      <p className="font-bold text-black">4 Interest-Free Installments of ${(grandTotal / 4).toFixed(2)}</p>
+                      <p className="font-bold text-black">4 Interest-Free Installments of {formatPrice(grandTotalUSD / 4)}</p>
                       <p className="text-neutral-600">No interest. No fees when paid on time via Klarna.</p>
                     </div>
                   )}
@@ -566,7 +576,7 @@ export const CheckoutPage: React.FC = () => {
                       <span>PROCESSING DISPATCH ORDER...</span>
                     ) : (
                       <>
-                        <span>PLACE ORDER // ${grandTotal.toFixed(2)} USD</span>
+                        <span>PLACE ORDER // {formatPrice(grandTotalUSD)} {currency}</span>
                         <ArrowRight size={16} />
                       </>
                     )}
@@ -615,7 +625,7 @@ export const CheckoutPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="font-sans font-bold text-sm text-black">
-                      ${(item.product.price * item.quantity).toFixed(2)}
+                      {formatPrice(item.product.price * item.quantity)}
                     </div>
                   </div>
                 ))}
@@ -659,27 +669,27 @@ export const CheckoutPage: React.FC = () => {
               <div className="pt-4 border-t border-neutral-200 space-y-2 font-sans text-xs">
                 <div className="flex justify-between text-neutral-600">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-black">${subtotal.toFixed(2)}</span>
+                  <span className="font-semibold text-black">{formatPrice(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold">
                     <span>Archive Member Discount</span>
-                    <span>-${discountAmount.toFixed(2)}</span>
+                    <span>-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-neutral-600">
                   <span>Estimated Shipping</span>
                   <span className="font-semibold text-black">
-                    {shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}
+                    {shippingCostUSD === 0 ? 'FREE' : formatPrice(shippingCostUSD)}
                   </span>
                 </div>
                 <div className="flex justify-between text-neutral-600">
                   <span>Estimated Tax</span>
-                  <span className="font-semibold text-black">${estimatedTax.toFixed(2)}</span>
+                  <span className="font-semibold text-black">{formatPrice(estimatedTaxUSD)}</span>
                 </div>
                 <div className="flex justify-between text-base font-bold text-black pt-3 border-t border-neutral-200">
                   <span>Total</span>
-                  <span>${grandTotal.toFixed(2)} USD</span>
+                  <span>{formatPrice(grandTotalUSD)} {currency}</span>
                 </div>
               </div>
 

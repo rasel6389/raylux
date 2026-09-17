@@ -3,6 +3,7 @@ import { Product } from '../../types/product';
 import { useCart } from '../../context/CartContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useStore } from '../../context/StoreContext';
+import { useCurrency } from '../../context/CurrencyContext';
 import { Plus, Check, Heart } from 'lucide-react';
 
 interface ProductCardProps {
@@ -14,6 +15,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className = '
   const { addToCart } = useCart();
   const { goToProduct } = useNavigation();
   const { toggleWishlist, isInWishlist } = useStore();
+  const { formatPrice } = useCurrency();
   const [isHovered, setIsHovered] = useState(false);
   const [selectedQuickSize, setSelectedQuickSize] = useState<string>(product.sizes[0] || 'ONE SIZE');
   const [addedAnimation, setAddedAnimation] = useState(false);
@@ -128,7 +130,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className = '
         {/* Price display & mobile add trigger */}
         <div className="pt-2 flex items-center justify-between">
           <div className="font-sans text-base font-semibold text-black">
-            ${product.price.toFixed(2)}
+            {formatPrice(product.price)}
           </div>
 
           <button

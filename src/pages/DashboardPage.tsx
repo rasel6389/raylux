@@ -3,7 +3,10 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import { UserOrders } from '../components/dashboard/UserOrders';
+import { UserTickets } from '../components/dashboard/UserTickets';
 import { useCart } from '../context/CartContext';
+import { useTickets } from '../context/TicketContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { AddAddressModal, AddressData } from '../components/account/AddAddressModal';
 import { AddPaymentModal, PaymentCardData } from '../components/account/AddPaymentModal';
 import {
@@ -19,6 +22,7 @@ import {
   Settings,
   Check,
   LogOut,
+  LifeBuoy,
   User as UserIcon,
 } from 'lucide-react';
 
@@ -27,6 +31,17 @@ export const DashboardPage: React.FC = () => {
   const { currentUser, logout, updateProfile, openAuthModal } = useAuth();
   const { wishlist: wishlistIds, toggleWishlist, products } = useStore();
   const { addToCart } = useCart();
+  const { tickets } = useTickets();
+  const { formatPrice } = useCurrency();
+
+  const userOpenTicketsCount = useMemo(() => {
+    if (!currentUser) return 0;
+    return tickets.filter(
+      (t) =>
+        (t.customerEmail?.toLowerCase() === currentUser.email.toLowerCase() || t.userId === currentUser.id) &&
+        t.status !== 'RESOLVED'
+    ).length;
+  }, [tickets, currentUser]);
 
   // Wishlist items derived from StoreContext
   const wishlistProducts = useMemo(() => {
@@ -228,6 +243,8 @@ export const DashboardPage: React.FC = () => {
                 ? 'PAYMENT METHODS & BILLING'
                 : dashboardTab === 'settings'
                 ? 'MEMBER SETTINGS & SIZING PREFERENCES'
+                : dashboardTab === 'tickets'
+                ? 'CLIENT CARE & SUPPORT TICKETS'
                 : 'MEMBER ACCOUNT & DISPATCHES'}
             </h1>
           </div>
@@ -340,6 +357,27 @@ export const DashboardPage: React.FC = () => {
                 <span>Account Settings</span>
               </button>
 
+              <button
+                onClick={() => goToDashboard('tickets')}
+                className={`w-full flex items-center justify-between px-3.5 py-3 transition-all text-left rounded-xl ${
+                  dashboardTab === 'tickets'
+                    ? 'bg-black text-white shadow'
+                    : 'bg-white text-neutral-700 hover:bg-neutral-100 hover:text-black'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <LifeBuoy size={17} />
+                  <span>Support & Concierge</span>
+                </div>
+                {userOpenTicketsCount > 0 && (
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                    dashboardTab === 'tickets' ? 'bg-amber-400 text-black' : 'bg-amber-100 text-amber-900'
+                  }`}>
+                    {userOpenTicketsCount}
+                  </span>
+                )}
+              </button>
+
               <div className="pt-3 border-t border-neutral-200 space-y-1.5">
                 <button
                   onClick={goToAdmin}
@@ -385,7 +423,10 @@ export const DashboardPage: React.FC = () => {
             {/* 1. ORDERS TAB (Default) */}
             {(dashboardTab === 'user' || dashboardTab === 'orders') && <UserOrders />}
 
-            {/* 2. WISHLIST / FAVORITES TAB */}
+            {/* 2. SUPPORT & TICKETS TAB */}
+            {dashboardTab === 'tickets' && <UserTickets />}
+
+            {/* 3. WISHLIST / FAVORITES TAB */}
             {dashboardTab === 'wishlist' && (
               <div className="space-y-6">
                 <div className="pb-4 border-b border-neutral-200 flex justify-between items-center">
@@ -438,7 +479,7 @@ export const DashboardPage: React.FC = () => {
                             {item.profile} • {item.material}
                           </p>
                           <p className="text-sm font-bold text-black mt-1">
-                            ${item.price.toFixed(2)} USD
+                            {formatPrice(item.price)}
                           </p>
                         </div>
                         <div className="pt-2">

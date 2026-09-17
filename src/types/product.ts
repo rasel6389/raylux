@@ -92,6 +92,8 @@ export interface Order {
   date: string;
   status: 'DELIVERED' | 'IN TRANSIT' | 'PROCESSING' | 'PENDING';
   total: number;
+  currency?: 'USD' | 'GBP';
+  currencyRate?: number;
   trackingNumber: string;
   carrier: string;
   estimatedDelivery: string;

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useCurrency } from '../../context/CurrencyContext';
 import { ShoppingBag, Menu, X, Search, Heart, User, ArrowRight, Camera, ShieldCheck, LogOut } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { totalItems, openCart } = useCart();
   const { currentPage, goToShop, goToHome, goToDashboard, goToLookbook, goToAdmin, searchQuery, setSearchQuery } = useNavigation();
   const { currentUser, logout, openAuthModal } = useAuth();
+  const { currency, setCurrency } = useCurrency();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -79,6 +81,30 @@ export const Navbar: React.FC = () => {
               </button>
             </>
           )}
+          <span>|</span>
+
+          {/* Dual Currency Switcher Pill */}
+          <div className="flex items-center bg-neutral-200/80 p-0.5 rounded-full text-[11px] font-bold">
+            <button
+              onClick={() => setCurrency('USD')}
+              className={`px-2 py-0.5 rounded-full transition-all ${
+                currency === 'USD' ? 'bg-white text-black shadow-2xs font-black' : 'text-neutral-600 hover:text-black'
+              }`}
+              title="Switch to US Dollar ($)"
+            >
+              $ USD
+            </button>
+            <button
+              onClick={() => setCurrency('GBP')}
+              className={`px-2 py-0.5 rounded-full transition-all ${
+                currency === 'GBP' ? 'bg-white text-black shadow-2xs font-black' : 'text-neutral-600 hover:text-black'
+              }`}
+              title="Switch to British Pound (£)"
+            >
+              £ GBP
+            </button>
+          </div>
+
           <span>|</span>
           <button
             onClick={goToAdmin}
@@ -241,14 +267,14 @@ export const Navbar: React.FC = () => {
       <div className="bg-[#f5f5f5] py-2.5 px-4 text-center text-xs font-sans font-medium text-neutral-800 border-b border-neutral-200">
         {currentUser ? (
           <p>
-            Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Raylux Member • Free Dispatch on Orders $150+.{' '}
+            Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Raylux Member • {currency === 'GBP' ? 'Free Dispatch on Orders £120+' : 'Free Dispatch on Orders $150+'}.{' '}
             <button onClick={() => goToDashboard('user')} className="underline font-bold hover:text-black">
               View Member Portal
             </button>
           </p>
         ) : (
           <p>
-            Members: Complimentary Worldwide Dispatch on orders $150+ • 30-Day Risk-Free Returns.{' '}
+            Members: Complimentary Worldwide Dispatch on orders {currency === 'GBP' ? '£120+' : '$150+'} • 30-Day Risk-Free Returns.{' '}
             <button onClick={() => openAuthModal('signin')} className="underline font-bold hover:text-black">
               Join or Sign In
             </button>
@@ -401,9 +427,29 @@ export const Navbar: React.FC = () => {
 
           </div>
 
-          <div className="p-6 border-t border-neutral-200 bg-neutral-50 font-sans text-xs text-neutral-500 flex justify-between items-center">
-            <span>CURRENCY: USD ($)</span>
-            <span>SHIPPING WORLDWIDE</span>
+          <div className="p-6 border-t border-neutral-200 bg-neutral-50 font-sans text-xs text-neutral-600 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-neutral-400 uppercase text-[10px]">Currency:</span>
+              <div className="flex items-center bg-neutral-200 p-0.5 rounded-full text-xs font-bold">
+                <button
+                  onClick={() => setCurrency('USD')}
+                  className={`px-2 py-0.5 rounded-full ${
+                    currency === 'USD' ? 'bg-white text-black shadow-xs' : 'text-neutral-600'
+                  }`}
+                >
+                  $ USD
+                </button>
+                <button
+                  onClick={() => setCurrency('GBP')}
+                  className={`px-2 py-0.5 rounded-full ${
+                    currency === 'GBP' ? 'bg-white text-black shadow-xs' : 'text-neutral-600'
+                  }`}
+                >
+                  £ GBP
+                </button>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">WORLDWIDE DISPATCH</span>
           </div>
         </div>
       )}

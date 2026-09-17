@@ -31,9 +31,18 @@ import {
   TrendingUp,
   Download,
   Menu,
+  Bot,
+  LifeBuoy,
+  Send,
+  Coins,
+  Globe,
 } from 'lucide-react';
+import { useTickets } from '../context/TicketContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { getAIAgentConfig, saveAIAgentConfig, askGeminiAgent } from '../services/aiAgent';
+import { AIAgentConfig, SupportTicket } from '../types/ticket';
 
-type AdminTab = 'overview' | 'orders' | 'inventory' | 'customers' | 'dispatches' | 'discounts' | 'settings';
+type AdminTab = 'overview' | 'orders' | 'inventory' | 'customers' | 'dispatches' | 'discounts' | 'support' | 'ai_agent' | 'settings';
 
 interface PromoCodeItem {
   code: string;
@@ -74,6 +83,30 @@ export const AdminPage: React.FC = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedInspectOrder, setSelectedInspectOrder] = useState<Order | null>(null);
   const [inspectCustomer, setInspectCustomer] = useState<(typeof registeredUsers)[0] | null>(null);
+
+  // Contexts for Tickets & Currency
+  const { tickets, updateTicketStatus, addReply } = useTickets();
+  const { currency, exchangeRate, setExchangeRate } = useCurrency();
+
+  // Support Desk state
+  const [supportFilter, setSupportFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [adminReplyText, setAdminReplyText] = useState('');
+
+  // AI Agent Config state
+  const [aiConfig, setAiConfig] = useState<AIAgentConfig>(() => getAIAgentConfig());
+  const [testAiQuery, setTestAiQuery] = useState('');
+  const [testAiLoading, setTestAiLoading] = useState(false);
+  const [testAiConversation, setTestAiConversation] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
+    { role: 'assistant', text: 'Raylux Intelligence Engine online. Connected to model: Gemini 3.8 Flash Preview. Ready to evaluate client requests.' },
+  ]);
+
+  // Exchange rate controller state
+  const [editGbpRate, setEditGbpRate] = useState(exchangeRate.toString());
+
+  useEffect(() => {
+    setEditGbpRate(exchangeRate.toString());
+  }, [exchangeRate]);
 
   // Notification Banner
   const [notification, setNotification] = useState<string | null>(null);
@@ -176,6 +209,69 @@ export const AdminPage: React.FC = () => {
       return true;
     });
   }, [registeredUsers, customerFilter, globalSearch]);
+
+  // Filtered Tickets
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((t) => {
+      if (supportFilter !== 'ALL' && t.status !== supportFilter) return false;
+      if (globalSearch.trim()) {
+        const q = globalSearch.toLowerCase();
+        const mId = t.id.toLowerCase().includes(q);
+        const mSub = t.subject.toLowerCase().includes(q);
+        const mEmail = t.customerEmail.toLowerCase().includes(q);
+        const mName = t.customerName.toLowerCase().includes(q);
+        const mOrder = t.orderNumber?.toLowerCase().includes(q);
+        if (!mId && !mSub && !mEmail && !mName && !mOrder) return false;
+      }
+      return true;
+    });
+  }, [tickets, supportFilter, globalSearch]);
+
+  const openTicketsCount = useMemo(() => {
+    return tickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
+  }, [tickets]);
+
+  // AI Agent test query handler
+  const handleTestAiQuery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testAiQuery.trim() || testAiLoading) return;
+    const q = testAiQuery.trim();
+    setTestAiQuery('');
+    setTestAiConversation((prev) => [...prev, { role: 'user', text: q }]);
+    setTestAiLoading(true);
+    try {
+      const resp = await askGeminiAgent(q, orders);
+      setTestAiConversation((prev) => [...prev, { role: 'assistant', text: resp }]);
+    } catch {
+      setTestAiConversation((prev) => [...prev, { role: 'assistant', text: 'Error querying AI engine. Please verify system configuration.' }]);
+    } finally {
+      setTestAiLoading(false);
+    }
+  };
+
+  const handleSaveAiConfig = () => {
+    saveAIAgentConfig(aiConfig);
+    showNotice('AI Agent parameters saved successfully!');
+  };
+
+  const handleSaveExchangeRate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = parseFloat(editGbpRate);
+    if (!isNaN(parsed) && parsed > 0) {
+      setExchangeRate(parsed);
+      showNotice(`Exchange rate set: 1 USD = ${parsed} GBP!`);
+    } else {
+      alert('Please enter a valid exchange rate greater than 0.');
+    }
+  };
+
+  const handleAdminSendReply = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTicket || !adminReplyText.trim()) return;
+    addReply(selectedTicket.id, adminReplyText.trim(), 'admin', 'Marcus Vance (Raylux Support)');
+    setAdminReplyText('');
+    showNotice('Specialist response sent to customer!');
+  };
 
   // Handlers
   const handleLogin = (e: React.FormEvent) => {
@@ -541,7 +637,60 @@ export const AdminPage: React.FC = () => {
               </button>
             </div>
 
-            {/* GROUP 3: SYSTEM */}
+            {/* GROUP 3: CARE & INTELLIGENCE */}
+            <div className="space-y-1 pt-1.5">
+              <span className="px-3 text-[10px] font-sans font-bold tracking-widest text-neutral-400 uppercase">
+                CARE & INTELLIGENCE
+              </span>
+
+              <button
+                onClick={() => { setActiveTab('support'); setIsMobileSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-full text-xs uppercase tracking-wider transition-all ${
+                  activeTab === 'support'
+                    ? 'bg-black text-white shadow-sm font-bold'
+                    : 'text-neutral-600 hover:text-black hover:bg-neutral-100 font-bold'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <LifeBuoy size={16} />
+                  <span>Support Desk</span>
+                </div>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
+                    activeTab === 'support'
+                      ? 'bg-white text-black'
+                      : openTicketsCount > 0
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-neutral-100 text-black border border-neutral-200'
+                  }`}
+                >
+                  {tickets.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => { setActiveTab('ai_agent'); setIsMobileSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-full text-xs uppercase tracking-wider transition-all ${
+                  activeTab === 'ai_agent'
+                    ? 'bg-black text-white shadow-sm font-bold'
+                    : 'text-neutral-600 hover:text-black hover:bg-neutral-100 font-bold'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Bot size={16} />
+                  <span>AI Agent Suite</span>
+                </div>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase ${
+                    aiConfig.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-600'
+                  }`}
+                >
+                  {aiConfig.enabled ? 'Live' : 'Off'}
+                </span>
+              </button>
+            </div>
+
+            {/* GROUP 4: SYSTEM */}
             <div className="space-y-1 pt-1.5">
               <span className="px-3 text-[10px] font-sans font-bold tracking-widest text-neutral-400 uppercase">
                 CONFIG
@@ -911,7 +1060,7 @@ export const AdminPage: React.FC = () => {
 
                       <div className="flex items-center gap-3 self-end sm:self-auto">
                         <span className="font-nike text-2xl font-black text-black">
-                          ${ord.total.toFixed(2)} USD
+                          {ord.currency === 'GBP' ? '£' : '$'}{ord.total.toFixed(2)} {ord.currency || 'USD'}
                         </span>
                         <button
                           onClick={() => setSelectedInspectOrder(ord)}
@@ -1023,7 +1172,7 @@ export const AdminPage: React.FC = () => {
                             </td>
 
                             <td className="py-4 px-6 font-nike text-2xl font-black text-black whitespace-nowrap">
-                              ${ord.total.toFixed(2)}
+                              {ord.currency === 'GBP' ? '£' : '$'}{ord.total.toFixed(2)}
                             </td>
 
                             <td className="py-4 px-6">
@@ -1520,6 +1669,451 @@ export const AdminPage: React.FC = () => {
             </div>
           )}
 
+          {/* TAB: SUPPORT DESK (CUSTOMER TICKETS) */}
+          {activeTab === 'support' && (
+            <div className="space-y-6 animate-fadeIn">
+              
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-4 border-b border-neutral-200">
+                <div>
+                  <span className="text-[11px] font-sans font-bold uppercase tracking-widest text-neutral-400">
+                    CLIENT CARE OPERATIONS
+                  </span>
+                  <h2 className="font-nike text-3xl sm:text-4xl font-black uppercase tracking-tight text-black mt-0.5">
+                    SUPPORT DESK & TICKETS
+                  </h2>
+                </div>
+                <div className="text-xs font-sans font-bold text-neutral-500 uppercase tracking-wider">
+                  CONCIERGE TELEMETRY // ACTIVE
+                </div>
+              </div>
+
+              {/* Support Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-2 shadow-xs">
+                  <span className="text-xs font-sans font-bold uppercase tracking-wider text-neutral-400">
+                    TOTAL INQUIRIES
+                  </span>
+                  <p className="font-nike text-3xl sm:text-4xl font-black text-black">
+                    {tickets.length}
+                  </p>
+                  <p className="text-[11px] text-neutral-500 font-bold uppercase">LIFETIME LOGGED INQUIRIES</p>
+                </div>
+
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-2 shadow-xs">
+                  <span className="text-xs font-sans font-bold uppercase tracking-wider text-amber-600">
+                    OPEN TICKETS
+                  </span>
+                  <p className="font-nike text-3xl sm:text-4xl font-black text-amber-600">
+                    {tickets.filter((t) => t.status === 'OPEN').length}
+                  </p>
+                  <p className="text-[11px] text-amber-700 font-bold uppercase">AWAITING SPECIALIST TRIAGE</p>
+                </div>
+
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-2 shadow-xs">
+                  <span className="text-xs font-sans font-bold uppercase tracking-wider text-blue-600">
+                    IN PROGRESS
+                  </span>
+                  <p className="font-nike text-3xl sm:text-4xl font-black text-blue-600">
+                    {tickets.filter((t) => t.status === 'IN_PROGRESS').length}
+                  </p>
+                  <p className="text-[11px] text-blue-700 font-bold uppercase">DISPATCH / INVESTIGATION</p>
+                </div>
+
+                <div className="bg-white border border-neutral-200 p-5 rounded-2xl space-y-2 shadow-xs">
+                  <span className="text-xs font-sans font-bold uppercase tracking-wider text-emerald-600">
+                    RESOLVED
+                  </span>
+                  <p className="font-nike text-3xl sm:text-4xl font-black text-emerald-600">
+                    {tickets.filter((t) => t.status === 'RESOLVED').length}
+                  </p>
+                  <p className="text-[11px] text-emerald-700 font-bold uppercase">CLIENT SATISFACTION CONFIRMED</p>
+                </div>
+              </div>
+
+              {/* Status Filter Pills */}
+              <div className="flex flex-wrap items-center gap-2">
+                {(['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setSupportFilter(st)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+                      supportFilter === st
+                        ? 'bg-black text-white shadow-xs'
+                        : 'bg-white text-neutral-600 hover:text-black border border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    {st === 'ALL' ? 'ALL TICKETS' : st.replace('_', ' ')} (
+                    {st === 'ALL'
+                      ? tickets.length
+                      : tickets.filter((t) => t.status === st).length}
+                    )
+                  </button>
+                ))}
+              </div>
+
+              {/* Tickets Table */}
+              <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-xs">
+                <table className="w-full text-left text-xs font-sans min-w-[700px]">
+                  <thead className="bg-neutral-50 text-neutral-500 uppercase text-[11px] font-bold tracking-wider border-b border-neutral-200">
+                    <tr>
+                      <th className="py-4 px-6">Ticket Ref</th>
+                      <th className="py-4 px-6">Client</th>
+                      <th className="py-4 px-6">Subject & Category</th>
+                      <th className="py-4 px-6">Associated Order</th>
+                      <th className="py-4 px-6">Status</th>
+                      <th className="py-4 px-6">Updated</th>
+                      <th className="py-4 px-6 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 text-neutral-800">
+                    {filteredTickets.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-neutral-400 font-medium">
+                          No customer support tickets match the current filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTickets.map((t) => (
+                        <tr key={t.id} className="hover:bg-neutral-50/80 transition-colors">
+                          <td className="py-4 px-6 font-mono font-bold text-black text-sm">
+                            {t.id}
+                          </td>
+                          <td className="py-4 px-6">
+                            <p className="font-bold text-black">{t.customerName}</p>
+                            <p className="text-[11px] text-neutral-500">{t.customerEmail}</p>
+                          </td>
+                          <td className="py-4 px-6">
+                            <p className="font-semibold text-black">{t.subject}</p>
+                            <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
+                              {t.category}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            {t.orderNumber ? (
+                              <span className="font-mono font-bold text-xs bg-neutral-100 px-2.5 py-1 rounded-md text-black border border-neutral-200">
+                                {t.orderNumber}
+                              </span>
+                            ) : (
+                              <span className="text-neutral-400 text-xs italic">General Inquiry</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase inline-flex items-center gap-1 ${
+                                t.status === 'OPEN'
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                  : t.status === 'IN_PROGRESS'
+                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  t.status === 'OPEN'
+                                    ? 'bg-amber-500'
+                                    : t.status === 'IN_PROGRESS'
+                                    ? 'bg-blue-500 animate-pulse'
+                                    : 'bg-emerald-500'
+                                }`}
+                              ></span>
+                              <span>{t.status.replace('_', ' ')}</span>
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-neutral-500 font-sans text-xs">
+                            {t.updatedAt}
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <button
+                              onClick={() => setSelectedTicket(t)}
+                              className="px-3.5 py-1.5 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1 shadow-xs"
+                            >
+                              <Eye size={12} />
+                              <span>Triage & Reply</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB: AI AGENT SUITE (GEMINI INTELLIGENCE) */}
+          {activeTab === 'ai_agent' && (
+            <div className="space-y-6 animate-fadeIn">
+              
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-4 border-b border-neutral-200">
+                <div>
+                  <span className="text-[11px] font-sans font-bold uppercase tracking-widest text-neutral-400">
+                    GOOGLE GEMINI INTELLIGENCE
+                  </span>
+                  <h2 className="font-nike text-3xl sm:text-4xl font-black uppercase tracking-tight text-black mt-0.5">
+                    AI CUSTOMER CARE AGENT SUITE
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${aiConfig.enabled ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'}`}></span>
+                  <span className="text-xs font-sans font-bold uppercase tracking-wider text-black">
+                    {aiConfig.enabled ? 'AGENT ONLINE' : 'AGENT OFFLINE'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Master Configuration Controls */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                {/* Left Column: Settings Form */}
+                <div className="lg:col-span-6 space-y-6">
+                  
+                  {/* Status & Model Selection Card */}
+                  <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-5 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-nike text-2xl font-black uppercase text-black">
+                          RUNTIME ENGINE & STATUS
+                        </h3>
+                        <p className="text-xs text-neutral-500">Configure floating widget operational status and underlying model</p>
+                      </div>
+                      
+                      {/* Active Toggle */}
+                      <button
+                        onClick={() => {
+                          const updated = { ...aiConfig, enabled: !aiConfig.enabled };
+                          setAiConfig(updated);
+                          saveAIAgentConfig(updated);
+                          showNotice(`AI Agent is now ${updated.enabled ? 'ENABLED' : 'DISABLED'}`);
+                        }}
+                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-xs flex items-center gap-2 ${
+                          aiConfig.enabled
+                            ? 'bg-black text-white hover:bg-neutral-800'
+                            : 'bg-neutral-100 text-neutral-500 hover:text-black border border-neutral-200'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${aiConfig.enabled ? 'bg-emerald-400' : 'bg-neutral-400'}`}></span>
+                        <span>{aiConfig.enabled ? 'Activated' : 'Disabled'}</span>
+                      </button>
+                    </div>
+
+                    {/* Model Selector Buttons */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700">
+                        Select Google Gemini Model Architecture
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setAiConfig((prev) => ({ ...prev, model: 'gemini-3.8-flash' }))}
+                          className={`p-4 rounded-xl border text-left transition-all ${
+                            aiConfig.model === 'gemini-3.8-flash'
+                              ? 'border-black bg-neutral-50 shadow-xs'
+                              : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-nike text-lg font-bold uppercase text-black">Gemini 3.8 Flash</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 bg-black text-white rounded-full uppercase">Ultra-Fast</span>
+                          </div>
+                          <p className="text-[11px] text-neutral-500 mt-1">Recommended. Lowest latency responses for sizing and order tracking.</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAiConfig((prev) => ({ ...prev, model: 'gemini-3.5-pro' }))}
+                          className={`p-4 rounded-xl border text-left transition-all ${
+                            aiConfig.model === 'gemini-3.5-pro'
+                              ? 'border-black bg-neutral-50 shadow-xs'
+                              : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-nike text-lg font-bold uppercase text-black">Gemini 3.5 Pro</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 bg-neutral-100 text-neutral-800 rounded-full uppercase">Advanced</span>
+                          </div>
+                          <p className="text-[11px] text-neutral-500 mt-1">Complex reasoning, multi-turn dialogue, and deep apparel advice.</p>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* API Key Configuration */}
+                    <div className="space-y-2 pt-2 border-t border-neutral-100">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700">
+                          Google Gemini API Key
+                        </label>
+                        <span className="text-[10px] text-neutral-400 font-sans">
+                          {aiConfig.apiKey ? 'Custom Key Configured' : 'Using Built-in Gemini Fallback'}
+                        </span>
+                      </div>
+                      <input
+                        type="password"
+                        placeholder="AIzaSy... (Leave empty to use built-in store engine)"
+                        value={aiConfig.apiKey}
+                        onChange={(e) => setAiConfig((prev) => ({ ...prev, apiKey: e.target.value }))}
+                        className="w-full bg-neutral-50 border border-neutral-300 px-3.5 py-2.5 text-xs text-black font-mono rounded-xl focus:outline-none focus:border-black"
+                      />
+                      <p className="text-[11px] text-neutral-500 font-sans">
+                        Keys are stored securely in browser state and utilized directly for Gemini streaming endpoints.
+                      </p>
+                    </div>
+
+                    {/* Temperature */}
+                    <div className="space-y-2 pt-2 border-t border-neutral-100">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700">
+                          Creativity & Precision (Temperature: {aiConfig.temperature})
+                        </label>
+                        <span className="text-[10px] text-neutral-400 font-sans">0.0 (Strict) to 1.0 (Creative)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={aiConfig.temperature}
+                        onChange={(e) => setAiConfig((prev) => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                        className="w-full accent-black cursor-pointer"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveAiConfig}
+                      className="w-full py-3 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
+                    >
+                      Save AI Parameters
+                    </button>
+
+                  </div>
+
+                  {/* System Prompt / Brand Tone Editor */}
+                  <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-4 shadow-xs">
+                    <div>
+                      <h3 className="font-nike text-2xl font-black uppercase text-black">
+                        BRAND KNOWLEDGE & SYSTEM DIRECTIVE
+                      </h3>
+                      <p className="text-xs text-neutral-500">
+                        System directives guiding tone, sizing recommendations, and GORE-TEX care specifications.
+                      </p>
+                    </div>
+                    <textarea
+                      rows={5}
+                      value={aiConfig.systemPrompt}
+                      onChange={(e) => setAiConfig((prev) => ({ ...prev, systemPrompt: e.target.value }))}
+                      className="w-full bg-neutral-50 border border-neutral-300 p-3.5 text-xs text-black font-mono rounded-xl focus:outline-none focus:border-black resize-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveAiConfig}
+                      className="px-5 py-2 bg-neutral-100 hover:bg-black hover:text-white border border-neutral-300 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
+                    >
+                      Update Brand Directive
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Right Column: Live Testing Sandbox Chat */}
+                <div className="lg:col-span-6 bg-white border border-neutral-200 rounded-2xl p-6 shadow-xs flex flex-col h-[650px]">
+                  
+                  <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-nike font-bold text-sm">
+                        R
+                      </div>
+                      <div>
+                        <h4 className="font-nike text-xl font-bold uppercase text-black leading-none">
+                          TEST SANDBOX // {aiConfig.model}
+                        </h4>
+                        <span className="text-[10px] text-neutral-400 font-sans uppercase tracking-wider">
+                          Real-time AI query simulator
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setTestAiConversation([{ role: 'assistant', text: 'Chat history cleared. Intelligence engine ready.' }])}
+                      className="text-[11px] font-bold text-neutral-400 hover:text-red-600 uppercase tracking-wider transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  {/* Messages Feed */}
+                  <div className="flex-1 overflow-y-auto py-4 space-y-3 pr-1 text-xs font-sans">
+                    {testAiConversation.map((msg, i) => (
+                      <div
+                        key={i}
+                        className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                      >
+                        <span className="text-[10px] text-neutral-400 font-mono uppercase mb-0.5 px-1">
+                          {msg.role === 'user' ? 'Admin Inspector' : 'Raylux AI Specialist'}
+                        </span>
+                        <div
+                          className={`max-w-[85%] px-4 py-3 rounded-2xl whitespace-pre-wrap leading-relaxed ${
+                            msg.role === 'user'
+                              ? 'bg-black text-white rounded-br-none'
+                              : 'bg-neutral-100 text-neutral-900 border border-neutral-200 rounded-bl-none'
+                          }`}
+                        >
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))}
+                    {testAiLoading && (
+                      <div className="flex items-center gap-2 text-neutral-400 text-xs italic p-2">
+                        <span className="w-2 h-2 rounded-full bg-black animate-ping"></span>
+                        <span>Evaluating via {aiConfig.model}...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Prompts Chips */}
+                  <div className="pt-2 border-t border-neutral-100 flex flex-wrap gap-1.5 pb-2">
+                    {[
+                      'Where is order RLX-8921-EU?',
+                      'What size for 59cm circumference?',
+                      'How much is £ in USD right now?',
+                      'How to clean GORE-TEX headwear?',
+                    ].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setTestAiQuery(chip)}
+                        className="px-2.5 py-1 bg-neutral-50 hover:bg-neutral-200 border border-neutral-200 rounded-full text-[10px] text-neutral-600 font-medium transition-colors"
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Input Form */}
+                  <form onSubmit={handleTestAiQuery} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Type inquiry to test AI agent..."
+                      value={testAiQuery}
+                      onChange={(e) => setTestAiQuery(e.target.value)}
+                      className="flex-1 bg-neutral-50 border border-neutral-300 px-4 py-2.5 text-xs text-black font-sans rounded-xl focus:outline-none focus:border-black"
+                    />
+                    <button
+                      type="submit"
+                      disabled={testAiLoading || !testAiQuery.trim()}
+                      className="px-5 py-2.5 bg-black text-white hover:bg-neutral-800 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Send size={13} />
+                      <span>Send</span>
+                    </button>
+                  </form>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
           {/* TAB 7: STORE SETTINGS */}
           {activeTab === 'settings' && (
             <div className="space-y-6 animate-fadeIn">
@@ -1531,6 +2125,102 @@ export const AdminPage: React.FC = () => {
                 <h2 className="font-nike text-3xl sm:text-4xl font-black uppercase tracking-tight text-black mt-0.5">
                   STORE SETTINGS & POLICIES
                 </h2>
+              </div>
+
+              {/* DUAL CURRENCY ENGINE CONTROLLER (USD $ / GBP £) */}
+              <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-sans font-bold uppercase tracking-widest text-neutral-400">
+                      INTERNATIONAL MONETARY CONTROLLER
+                    </span>
+                    <h3 className="font-nike text-2xl font-black uppercase text-black mt-0.5">
+                      DUAL CURRENCY ENGINE (USD $ / GBP £)
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                      Configure live conversion rates between US Dollars ($) and British Pounds (£). Cascades directly to storefront catalog, bag drawer, and express checkout.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-neutral-100 text-black border border-neutral-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <Globe size={13} />
+                      <span>Active Store Currency: <strong>{currency} ({currency === 'GBP' ? '£' : '$'})</strong></span>
+                    </span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveExchangeRate} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
+                      Exchange Rate (1 USD = ? GBP)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-neutral-400 text-sm">
+                        £
+                      </span>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min="0.1"
+                        max="5.0"
+                        required
+                        value={editGbpRate}
+                        onChange={(e) => setEditGbpRate(e.target.value)}
+                        className="w-full bg-neutral-50 border border-neutral-300 pl-8 pr-3.5 py-2.5 text-sm font-mono font-bold text-black rounded-xl focus:outline-none focus:border-black"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
+                      Inverse Rate (1 GBP = ? USD)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-neutral-400 text-sm">
+                        $
+                      </span>
+                      <input
+                        type="text"
+                        disabled
+                        value={parseFloat(editGbpRate) > 0 ? (1 / parseFloat(editGbpRate)).toFixed(4) : '0.0000'}
+                        className="w-full bg-neutral-100 border border-neutral-200 pl-8 pr-3.5 py-2.5 text-sm font-mono font-bold text-neutral-500 rounded-xl cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors shadow-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Coins size={14} />
+                      <span>Save & Apply Exchange Rate</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Conversion Preview Matrix */}
+                <div className="pt-2 border-t border-neutral-100">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block mb-2">
+                    LIVE CONVERSION PREVIEW MATRIX
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Sample Cap ($95)', usd: 95 },
+                      { label: 'Free Shipping Threshold ($150)', usd: 150 },
+                      { label: 'Apex Shell ($220)', usd: 220 },
+                      { label: 'Multi-Cap Cart ($340)', usd: 340 },
+                    ].map((sample) => (
+                      <div key={sample.label} className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl space-y-0.5">
+                        <span className="text-[10px] text-neutral-400 font-bold uppercase block truncate">{sample.label}</span>
+                        <div className="flex items-baseline justify-between font-mono">
+                          <span className="text-xs text-neutral-500">${sample.usd.toFixed(2)}</span>
+                          <span className="text-sm font-bold text-black">£{(sample.usd * (parseFloat(editGbpRate) || 0.79)).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Shipping & Tax Rules */}
@@ -1775,7 +2465,7 @@ export const AdminPage: React.FC = () => {
               <div>
                 <span className="text-[11px] font-sans font-bold text-neutral-400 uppercase block">TOTAL BILLED</span>
                 <p className="font-nike text-3xl font-black text-black">
-                  ${selectedInspectOrder.total.toFixed(2)} USD
+                  {selectedInspectOrder.currency === 'GBP' ? '£' : '$'}{selectedInspectOrder.total.toFixed(2)} {selectedInspectOrder.currency || 'USD'}
                 </p>
               </div>
 
@@ -1850,6 +2540,158 @@ export const AdminPage: React.FC = () => {
             >
               Close Profile
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* INSPECT & REPLY TICKET MODAL */}
+      {selectedTicket && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-neutral-200 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[90vh] flex flex-col font-sans">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start pb-4 border-b border-neutral-200">
+              <div>
+                <span className="text-[10px] font-sans font-bold uppercase tracking-widest text-neutral-400">
+                  CONCIERGE TICKET // {selectedTicket.createdAt}
+                </span>
+                <h3 className="font-nike text-3xl font-black text-black mt-0.5">
+                  {selectedTicket.id}: {selectedTicket.subject}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedTicket(null)}
+                id="close-ticket-modal-btn"
+                className="p-1.5 text-neutral-400 hover:text-black rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Client and Order Context */}
+            <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="text-neutral-400 font-bold uppercase block text-[10px]">CLIENT INQUIRER</span>
+                <p className="font-bold text-black">{selectedTicket.customerName}</p>
+                <p className="text-neutral-500 font-mono text-[11px]">{selectedTicket.customerEmail}</p>
+                {selectedTicket.orderNumber && (
+                  <p className="text-black font-semibold mt-1">
+                    Related Order: <span className="font-mono bg-white px-2 py-0.5 rounded border border-neutral-200">{selectedTicket.orderNumber}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Status Selector */}
+              <div className="flex flex-col sm:items-end gap-1.5">
+                <span className="text-neutral-400 font-bold uppercase text-[10px]">TICKET STATUS</span>
+                <select
+                  value={selectedTicket.status}
+                  onChange={(e) => {
+                    const st = e.target.value as SupportTicket['status'];
+                    updateTicketStatus(selectedTicket.id, st);
+                    setSelectedTicket({ ...selectedTicket, status: st });
+                    showNotice(`Ticket status changed to ${st.replace('_', ' ')}!`);
+                  }}
+                  className="px-4 py-2 bg-white border border-neutral-300 text-black rounded-full font-bold uppercase text-xs focus:border-black focus:outline-none shadow-xs cursor-pointer"
+                >
+                  <option value="OPEN">Open</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="RESOLVED">Resolved</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Message Thread History */}
+            <div className="flex-1 overflow-y-auto max-h-72 space-y-3 p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+              {selectedTicket.messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`flex flex-col ${m.sender === 'admin' || m.sender === 'support' ? 'items-end' : 'items-start'}`}
+                >
+                  <div className="flex items-center gap-2 mb-1 px-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                      {m.senderName} {m.sender === 'admin' || m.sender === 'support' ? '(Staff Specialist)' : '(Customer)'}
+                    </span>
+                    <span className="text-[10px] text-neutral-400 font-mono">{m.timestamp}</span>
+                  </div>
+                  <div
+                    className={`max-w-[85%] px-4 py-3 rounded-2xl text-xs leading-relaxed whitespace-pre-wrap ${
+                      m.sender === 'admin' || m.sender === 'support'
+                        ? 'bg-black text-white rounded-br-none'
+                        : 'bg-white text-neutral-900 border border-neutral-200 rounded-bl-none shadow-xs'
+                    }`}
+                  >
+                    {m.message}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Status Action Pills */}
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Quick Status:</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateTicketStatus(selectedTicket.id, 'OPEN');
+                    setSelectedTicket({ ...selectedTicket, status: 'OPEN' });
+                    showNotice('Ticket marked as OPEN');
+                  }}
+                  className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                >
+                  Mark Open
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateTicketStatus(selectedTicket.id, 'IN_PROGRESS');
+                    setSelectedTicket({ ...selectedTicket, status: 'IN_PROGRESS' });
+                    showNotice('Ticket marked as IN PROGRESS');
+                  }}
+                  className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                >
+                  Mark In Progress
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateTicketStatus(selectedTicket.id, 'RESOLVED');
+                    setSelectedTicket({ ...selectedTicket, status: 'RESOLVED' });
+                    showNotice('Ticket marked as RESOLVED');
+                  }}
+                  className="px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                >
+                  Mark Resolved
+                </button>
+              </div>
+            </div>
+
+            {/* Admin Reply Form */}
+            <form onSubmit={handleAdminSendReply} className="space-y-2 pt-2 border-t border-neutral-200">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600">
+                Send Specialist Response to Client
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  required
+                  placeholder="Type official reply to client thread..."
+                  value={adminReplyText}
+                  onChange={(e) => setAdminReplyText(e.target.value)}
+                  className="flex-1 bg-neutral-50 border border-neutral-300 px-4 py-3 text-xs text-black font-sans rounded-xl focus:outline-none focus:border-black"
+                />
+                <button
+                  type="submit"
+                  disabled={!adminReplyText.trim()}
+                  className="px-6 py-3 bg-black text-white hover:bg-neutral-800 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+                >
+                  <Send size={13} />
+                  <span>Transmit</span>
+                </button>
+              </div>
+            </form>
+
           </div>
         </div>
       )}

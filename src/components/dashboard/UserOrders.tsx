@@ -117,7 +117,7 @@ export const UserOrders: React.FC = () => {
                       {order.items.length} {order.items.length === 1 ? 'Cap' : 'Caps'}
                     </span>
                     <span className="font-bold text-black">
-                      ${order.total.toFixed(2)} USD
+                      {order.currency === 'GBP' ? '£' : '$'}{order.total.toFixed(2)} {order.currency || 'USD'}
                     </span>
                   </div>
                 </div>
@@ -140,7 +140,7 @@ export const UserOrders: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <span className="font-sans text-xl font-extrabold text-black">
-                    ${selectedOrder.total.toFixed(2)} USD
+                    {selectedOrder.currency === 'GBP' ? '£' : '$'}{selectedOrder.total.toFixed(2)} {selectedOrder.currency || 'USD'}
                   </span>
                   <span className="font-sans text-[11px] text-neutral-500 block">PAID VIA STRIPE SECURE</span>
                 </div>
@@ -188,7 +188,7 @@ export const UserOrders: React.FC = () => {
                         </div>
                       </div>
                       <div className="font-sans text-sm font-bold text-black">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {selectedOrder.currency === 'GBP' ? '£' : '$'}{(item.price * item.quantity).toFixed(2)}
                       </div>
                     </div>
                   ))}

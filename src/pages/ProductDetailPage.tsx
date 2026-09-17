@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigation } from '../context/NavigationContext';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { ProductCard } from '../components/product/ProductCard';
 import { ArrowLeft, Truck, RotateCcw, ChevronDown, ChevronUp, Heart } from 'lucide-react';
 
@@ -9,6 +10,7 @@ export const ProductDetailPage: React.FC = () => {
   const { selectedProductId, goToShop } = useNavigation();
   const { addToCart } = useCart();
   const { products, toggleWishlist, isInWishlist } = useStore();
+  const { formatPrice, currency } = useCurrency();
 
   const product = products.find((p) => p.id === selectedProductId) || products[0];
   const isFavorited = isInWishlist(product.id);
@@ -139,10 +141,10 @@ export const ProductDetailPage: React.FC = () => {
               {/* Large Price Display */}
               <div className="pt-2 flex items-baseline gap-2 font-sans">
                 <span className="text-2xl sm:text-3xl font-bold text-black">
-                  ${product.price.toFixed(2)}
+                  {formatPrice(product.price)}
                 </span>
-                <span className="text-xs text-neutral-500 uppercase">
-                  USD (Incl. all taxes)
+                <span className="text-xs text-neutral-500 uppercase font-mono">
+                  {currency} (Incl. all taxes)
                 </span>
               </div>
             </div>
@@ -215,7 +217,7 @@ export const ProductDetailPage: React.FC = () => {
                 onClick={handleAddToCart}
                 className="w-full py-5 px-6 bg-black text-white font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-800 transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2"
               >
-                <span>ADD TO BAG // ${product.price.toFixed(2)}</span>
+                <span>ADD TO BAG // {formatPrice(product.price)}</span>
               </button>
 
               <button

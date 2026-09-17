@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type PageRoute = 'home' | 'shop' | 'pdp' | 'dashboard' | 'checkout' | 'lookbook' | 'admin';
-export type DashboardTab = 'user' | 'wishlist' | 'addresses' | 'payments' | 'settings' | 'orders';
+export type DashboardTab = 'user' | 'wishlist' | 'addresses' | 'payments' | 'settings' | 'orders' | 'tickets';
 
 interface NavigationContextType {
   currentPage: PageRoute;
