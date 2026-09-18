@@ -36,7 +36,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     setIsSubmitting(true);
     createTicket({
       customerName: currentUser?.name || 'Valued Member',
-      customerEmail: currentUser?.email || 'guest@raylux.com',
+      customerEmail: currentUser?.email || 'guest@rayluxx.com',
       userId: currentUser?.id,
       orderNumber: selectedOrder || undefined,
       subject: subject.trim(),

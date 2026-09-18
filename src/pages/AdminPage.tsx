@@ -55,7 +55,7 @@ interface PromoCodeItem {
 }
 
 const DEFAULT_PROMO_CODES: PromoCodeItem[] = [
-  { code: 'RAYLUX10', percent: 10, active: true, uses: 42, expiry: '2026-12-31' },
+  { code: 'RAYLUXX10', percent: 10, active: true, uses: 42, expiry: '2026-12-31' },
   { code: 'MONOLITH20', percent: 20, active: true, uses: 18, expiry: '2026-10-15' },
   { code: 'MEMBER20', percent: 20, active: true, uses: 64, expiry: '2026-12-31' },
   { code: 'VIP25', percent: 25, active: false, uses: 9, expiry: '2026-08-30' },
@@ -102,7 +102,7 @@ export const AdminPage: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Login form state
-  const [email, setEmail] = useState('admin@raylux.com');
+  const [email, setEmail] = useState('admin@rayluxx.com');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -195,7 +195,7 @@ export const AdminPage: React.FC = () => {
   const [testAiQuery, setTestAiQuery] = useState('');
   const [testAiLoading, setTestAiLoading] = useState(false);
   const [testAiConversation, setTestAiConversation] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
-    { role: 'assistant', text: 'Raylux Intelligence Engine online. Connected to Gemini 3.8 Flash. Ready to assist with inventory, order tracking, and client concierge.' },
+    { role: 'assistant', text: 'Rayluxx Intelligence Engine online. Connected to Gemini 3.8 Flash. Ready to assist with inventory, order tracking, and client concierge.' },
   ]);
 
   // Exchange rate controller state (GBP and EUR)
@@ -348,15 +348,14 @@ export const AdminPage: React.FC = () => {
     e.preventDefault();
     const success = loginAdmin(password);
     if (!success) {
-      setErrorMsg('Invalid passcode. Use "raylux2026" or "admin".');
-    } else {
-      setErrorMsg('');
+      setErrorMsg('Invalid passcode. Use "rayluxx2026" or "admin".');
     }
   };
 
   const handleQuickDemoFill = () => {
-    setPassword('raylux2026');
-    loginAdmin('raylux2026');
+    setEmail('admin@rayluxx.com');
+    setPassword('rayluxx2026');
+    loginAdmin('rayluxx2026');
   };
 
   const handleCreatePromoCode = (e: React.FormEvent) => {
@@ -508,7 +507,7 @@ export const AdminPage: React.FC = () => {
   const handleAdminSendReply = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTicket || !adminReplyText.trim()) return;
-    addReply(selectedTicket.id, adminReplyText.trim(), 'admin', 'Marcus Vance (Raylux Support)');
+    addReply(selectedTicket.id, adminReplyText.trim(), 'admin', 'Marcus Vance (Rayluxx Support)');
     setAdminReplyText('');
     showNotice('Response sent to customer!');
   };
@@ -524,7 +523,7 @@ export const AdminPage: React.FC = () => {
           {/* Brand Header */}
           <div className="text-center space-y-2 mb-6">
             <span className="font-nike text-3xl font-black tracking-tighter uppercase block text-black">
-              RAYLUX
+              RAYLUXX
             </span>
             <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block">
               OPERATIONS & STOREFRONT CMS
@@ -538,7 +537,7 @@ export const AdminPage: React.FC = () => {
               <KeyRound size={14} className="text-neutral-500" />
               <div>
                 <span className="text-[9px] uppercase font-bold text-neutral-400 block tracking-wider">Demo Key</span>
-                <span className="text-xs font-mono font-bold text-black">raylux2026</span>
+                <span className="text-xs font-mono font-bold text-black">rayluxx2026</span>
               </div>
             </div>
             <button
@@ -644,7 +643,7 @@ export const AdminPage: React.FC = () => {
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-nike text-lg font-black tracking-tight uppercase">RAYLUX</span>
+            <span className="font-nike text-lg font-black tracking-tight uppercase">RAYLUXX</span>
             <span className="text-[10px] font-bold text-neutral-400 uppercase">ADMIN</span>
           </div>
         </div>
@@ -674,7 +673,7 @@ export const AdminPage: React.FC = () => {
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
                 <div>
-                  <span className="font-nike text-xl font-black uppercase tracking-tight">RAYLUX LAB</span>
+                  <span className="font-nike text-xl font-black uppercase tracking-tight">RAYLUXX LAB</span>
                   <span className="text-[10px] font-bold text-neutral-400 block tracking-widest uppercase">Admin Workspace</span>
                 </div>
                 <button
@@ -754,7 +753,7 @@ export const AdminPage: React.FC = () => {
           <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
             <div>
               <span className="font-nike text-2xl font-black text-black tracking-tighter uppercase block">
-                RAYLUX
+                RAYLUXX
               </span>
               <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block">
                 FLAGSHIP OPERATIONS
@@ -879,7 +878,7 @@ export const AdminPage: React.FC = () => {
           {/* Breadcrumb & Clock */}
           <div className="flex items-center gap-4">
             <div className="text-xs font-bold tracking-wider uppercase text-neutral-400 flex items-center gap-1.5">
-              <span>Raylux</span>
+              <span>Rayluxx</span>
               <span>/</span>
               <span className="text-black">{activeTab.replace('_', ' ')}</span>
             </div>
@@ -1368,7 +1367,7 @@ export const AdminPage: React.FC = () => {
                       type="text"
                       value={editHero.superTitle}
                       onChange={(e) => setEditHero({ ...editHero, superTitle: e.target.value.toUpperCase() })}
-                      placeholder="e.g. RAYLUX TECHNICAL HEADWEAR LAB"
+                      placeholder="e.g. RAYLUXX TECHNICAL HEADWEAR LAB"
                       className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black uppercase font-bold tracking-widest focus:bg-white focus:outline-none focus:border-black"
                     />
                   </div>

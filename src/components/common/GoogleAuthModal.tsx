@@ -90,7 +90,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClos
               <h3 className="text-base font-semibold text-neutral-800 leading-tight">
                 Sign in with Google
               </h3>
-              <p className="text-xs text-neutral-500">to continue to RAYLUX</p>
+              <p className="text-xs text-neutral-500">to continue to RAYLUXX</p>
             </div>
           </div>
 
@@ -212,7 +212,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClos
           </div>
 
           <div className="text-[11px] text-neutral-400 leading-relaxed pt-1">
-            To continue, Google will share your name, email address, language preference, and profile picture with RAYLUX. See RAYLUX's Privacy Policy.
+            To continue, Google will share your name, email address, language preference, and profile picture with RAYLUXX. See RAYLUXX's Privacy Policy.
           </div>
         </div>
 

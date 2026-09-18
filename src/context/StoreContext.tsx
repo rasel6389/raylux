@@ -10,7 +10,7 @@ export const DEFAULT_HERO_CONFIG: HeroBannerConfig = {
   badgeActive: true,
   topRightCaptionLine1: 'ARCHITECTURAL TECHNICAL HEADWEAR',
   topRightCaptionLine2: 'DESIGNED FOR UNCOMPROMISED PRECISION',
-  superTitle: 'RAYLUX TECHNICAL HEADWEAR LAB',
+  superTitle: 'RAYLUXX TECHNICAL HEADWEAR LAB',
   mainTitle: 'ENGINEERED TO LEAD',
   description: 'Series 01 Architectural Headwear. Bonded waterproof seams, genuine GORE-TEX 3L membranes, and high-density 340 GSM twills designed with relentless discipline.',
   imageUrl: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=2400&q=85',
@@ -127,7 +127,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [heroConfig, setHeroConfig] = useState<HeroBannerConfig>(() => {
     try {
       const saved = localStorage.getItem(HERO_CONFIG_KEY);
-      if (saved) return { ...DEFAULT_HERO_CONFIG, ...JSON.parse(saved) };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.superTitle === 'RAYLUX TECHNICAL HEADWEAR LAB') {
+          parsed.superTitle = 'RAYLUXX TECHNICAL HEADWEAR LAB';
+        }
+        return { ...DEFAULT_HERO_CONFIG, ...parsed };
+      }
     } catch {
       // ignore
     }

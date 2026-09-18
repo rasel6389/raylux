@@ -49,7 +49,7 @@ export const AdminOverview: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-200">
         <div>
           <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest block">
-            RAYLUX INTERNAL LOGISTICS // PRIVILEGED CONSOLE
+            RAYLUXX INTERNAL LOGISTICS // PRIVILEGED CONSOLE
           </span>
           <h2 className="font-nike text-3xl font-black uppercase tracking-tight text-black">
             OPERATIONS & INVENTORY MATRIX

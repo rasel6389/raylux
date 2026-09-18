@@ -111,7 +111,7 @@ export const AuthModal: React.FC = () => {
           <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-neutral-100">
             <div className="flex items-center gap-2">
               <span className="font-nike text-2xl font-black tracking-tight text-black">
-                RAYLUX
+                RAYLUXX
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider bg-black text-white px-2 py-0.5 rounded-full">
                 MEMBERSHIP
@@ -168,7 +168,7 @@ export const AuthModal: React.FC = () => {
                 {authModalMode === 'signin'
                   ? 'WELCOME BACK TO THE ARCHIVE'
                   : authModalMode === 'signup'
-                  ? 'BECOME A RAYLUX MEMBER'
+                  ? 'BECOME A RAYLUXX MEMBER'
                   : 'RESET YOUR PASSWORD'}
               </h2>
               <p className="text-xs text-neutral-500">
@@ -409,7 +409,7 @@ export const AuthModal: React.FC = () => {
                     className="w-4 h-4 mt-0.5 accent-black rounded"
                   />
                   <span className="text-[11px] text-neutral-600 leading-snug">
-                    I agree to RAYLUX's <strong className="text-black">Privacy Policy</strong> and <strong className="text-black">Terms of Sale</strong>.
+                    I agree to RAYLUXX's <strong className="text-black">Privacy Policy</strong> and <strong className="text-black">Terms of Sale</strong>.
                   </span>
                 </label>
 
@@ -480,7 +480,7 @@ export const AuthModal: React.FC = () => {
               </p>
             ) : authModalMode === 'signup' ? (
               <p>
-                Already have a Raylux account?{' '}
+                Already have a Rayluxx account?{' '}
                 <button
                   type="button"
                   onClick={() => openAuthModal('signin')}

@@ -23,7 +23,7 @@ export const HomePage: React.FC = () => {
         <div className="absolute inset-0 z-0">
           <img
             src={heroConfig.imageUrl || "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=2400&q=85"}
-            alt="RAYLUX Hero Banner Editorial"
+            alt="RAYLUXX Hero Banner Editorial"
             className="w-full h-full object-cover object-[center_28%] filter contrast-[1.12] brightness-[0.82] transition-all duration-700"
           />
           {/* Subtle Nike-style contrast vignette */}
@@ -158,7 +158,7 @@ export const HomePage: React.FC = () => {
           <div className="lg:col-span-6 relative aspect-square lg:aspect-[4/3] overflow-hidden bg-neutral-200">
             <img
               src="https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=1200&q=80"
-              alt="RAYLUX Technical Cap Construction"
+              alt="RAYLUXX Technical Cap Construction"
               className="w-full h-full object-cover object-center filter contrast-105"
             />
             <div className="absolute bottom-6 left-6 bg-black text-white p-4 font-sans text-xs space-y-1">
@@ -178,7 +178,7 @@ export const HomePage: React.FC = () => {
                 DISCIPLINED FORM. ZERO COMPROMISE.
               </h2>
               <p className="font-sans text-base text-neutral-700 leading-relaxed">
-                Traditional headwear relies on decorative crests, fragile crowns, and cheap synthetics. RAYLUX discards ornament in favor of architectural purity. Engineered for endurance athletes, architects, and urban commuters who demand relentless quality.
+                Traditional headwear relies on decorative crests, fragile crowns, and cheap synthetics. RAYLUXX discards ornament in favor of architectural purity. Engineered for endurance athletes, architects, and urban commuters who demand relentless quality.
               </p>
             </div>
 

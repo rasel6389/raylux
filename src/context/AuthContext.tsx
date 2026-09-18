@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
             const newUser: User = {
               id: fbUser.uid,
-              name: fbUser.displayName || userEmail.split('@')[0] || 'Raylux Member',
+              name: fbUser.displayName || userEmail.split('@')[0] || 'Rayluxx Member',
               email: userEmail,
               avatar: fbUser.photoURL || undefined,
               provider: fbUser.providerData[0]?.providerId === 'google.com' ? 'google' : 'email',
@@ -214,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const newUser: User = {
       id: `usr-${Date.now()}`,
-      name: trimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Raylux Member',
+      name: trimmed.split('@')[0].replace(/[^a-zA-Z]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Rayluxx Member',
       email: trimmed,
       provider: 'email',
       joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),

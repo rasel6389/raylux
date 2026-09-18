@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { queryRayluxAgent, getAIAgentConfig } from '../../services/aiAgent';
+import { queryRayluxxAgent, getAIAgentConfig } from '../../services/aiAgent';
 import { X, Send, Sparkles, Bot, ArrowRight } from 'lucide-react';
 
 interface ChatMessage {
@@ -27,7 +27,7 @@ export const AIAgentWidget: React.FC = () => {
     {
       id: 'msg-welcome',
       sender: 'agent',
-      text: aiConfig.welcomeMessage || 'RAYLUX INTELLIGENCE ONLINE // Inquire about sizing specs, GORE-TEX care, order dispatch waybills, or USD/GBP currencies.',
+      text: aiConfig.welcomeMessage || 'RAYLUXX INTELLIGENCE ONLINE // Inquire about sizing specs, GORE-TEX care, order dispatch waybills, or USD/GBP currencies.',
       timestamp: 'Now',
     },
   ]);
@@ -60,7 +60,7 @@ export const AIAgentWidget: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const response = await queryRayluxAgent(textToSend, orders, currency, exchangeRate, aiConfig);
+      const response = await queryRayluxxAgent(textToSend, orders, currency, exchangeRate, aiConfig);
       const agentMsg: ChatMessage = {
         id: `msg-agent-${Date.now()}`,
         sender: 'agent',
@@ -72,7 +72,7 @@ export const AIAgentWidget: React.FC = () => {
       const errorMsg: ChatMessage = {
         id: `msg-err-${Date.now()}`,
         sender: 'agent',
-        text: 'RAYLUX INTELLIGENCE telemetry offline. Please try again or open an administrative support ticket.',
+        text: 'RAYLUXX INTELLIGENCE telemetry offline. Please try again or open an administrative support ticket.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -96,11 +96,11 @@ export const AIAgentWidget: React.FC = () => {
           onClick={() => setIsOpen(true)}
           id="ai-agent-trigger-pill"
           className="fixed bottom-6 right-6 z-40 group flex items-center gap-3 bg-black text-white px-4 py-3 rounded-full shadow-2xl border border-neutral-800 hover:scale-105 active:scale-95 transition-all"
-          aria-label="Open Raylux Intelligence Agent"
+          aria-label="Open Rayluxx Intelligence Agent"
         >
           <div className="relative flex items-center justify-center">
             <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center">
-              {/* Branded Raylux geometric lens / AI icon */}
+              {/* Branded Rayluxx geometric lens / AI icon */}
               <Sparkles size={16} className="text-white animate-pulse" />
             </div>
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-black"></span>
@@ -108,7 +108,7 @@ export const AIAgentWidget: React.FC = () => {
 
           <div className="text-left hidden sm:block">
             <span className="text-[11px] font-nike font-black uppercase tracking-wider block text-white leading-none">
-              RAYLUX AGENT
+              RAYLUXX AGENT
             </span>
             <span className="text-[10px] font-sans font-semibold text-neutral-400 block tracking-wide leading-none mt-1">
               GEMINI 3.8 AI
@@ -131,7 +131,7 @@ export const AIAgentWidget: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-nike text-lg font-black uppercase tracking-tight text-white leading-none">
-                    RAYLUX INTELLIGENCE
+                    RAYLUXX INTELLIGENCE
                   </h3>
                   <span className="bg-neutral-800 text-neutral-300 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold">
                     GEMINI 3.8
@@ -177,7 +177,7 @@ export const AIAgentWidget: React.FC = () => {
                 >
                   <div className="flex items-baseline gap-2 mb-1 px-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                      {isAgent ? 'Raylux Agent' : 'You'}
+                      {isAgent ? 'Rayluxx Agent' : 'You'}
                     </span>
                     <span className="text-[10px] font-mono text-neutral-400">{msg.timestamp}</span>
                   </div>
@@ -198,7 +198,7 @@ export const AIAgentWidget: React.FC = () => {
             {isTyping && (
               <div className="flex flex-col items-start">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1 px-1">
-                  Raylux Agent
+                  Rayluxx Agent
                 </span>
                 <div className="bg-white border border-neutral-200 p-3 rounded-2xl rounded-tl-sm shadow-2xs flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-black rounded-full animate-bounce"></div>

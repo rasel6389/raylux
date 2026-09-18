@@ -90,7 +90,7 @@ export const ShopPage: React.FC = () => {
       <div className="bg-white border-b border-neutral-200 py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-2">
           <div className="font-sans text-xs text-neutral-500 uppercase tracking-wider font-semibold flex items-center gap-2">
-            <span>RAYLUX</span>
+            <span>RAYLUXX</span>
             <span>/</span>
             <span>HEADWEAR</span>
             {filters.category !== 'ALL' && (

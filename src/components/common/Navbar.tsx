@@ -45,7 +45,7 @@ export const Navbar: React.FC = () => {
       <div className="bg-[#f5f5f5] text-[#707072] text-[12px] font-sans font-medium h-9 border-b border-neutral-200 hidden sm:flex items-center justify-between px-6 sm:px-10 select-none">
         <div className="flex items-center gap-2">
           <button onClick={goToHome} className="font-nike text-sm font-black text-black hover:opacity-75 uppercase tracking-tight">
-            RAYLUX LAB
+            RAYLUXX LAB
           </button>
         </div>
         <div className="flex items-center gap-4">
@@ -184,7 +184,7 @@ export const Navbar: React.FC = () => {
               className="group flex items-center gap-1.5 text-left focus:outline-none"
             >
               <span className="font-nike text-3xl sm:text-4xl font-black tracking-tighter text-black group-hover:opacity-80 transition-opacity">
-                RAYLUX
+                RAYLUXX
               </span>
             </button>
           </div>
@@ -313,7 +313,7 @@ export const Navbar: React.FC = () => {
           <div className="max-w-4xl mx-auto pr-6">
             {currentUser ? (
               <p>
-                Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Raylux Member • {
+                Welcome, <strong className="text-black">{currentUser.name}</strong> • All-Access Rayluxx Member • {
                   currency === 'GBP' ? 'Free Dispatch on Orders £120+' : currency === 'EUR' ? 'Free Dispatch on Orders €140+' : 'Free Dispatch on Orders $150+'
                 }.{' '}
                 <button onClick={() => goToDashboard('user')} className="underline font-bold hover:text-black cursor-pointer ml-1">
@@ -362,7 +362,7 @@ export const Navbar: React.FC = () => {
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col bg-white animate-fadeIn">
           <div className="flex items-center justify-between p-6 border-b border-neutral-200">
             <span className="font-nike text-3xl font-black tracking-tighter">
-              RAYLUX
+              RAYLUXX
             </span>
             <button
               onClick={() => setMobileMenuOpen(false)}
@@ -492,7 +492,7 @@ export const Navbar: React.FC = () => {
                     onClick={() => { openAuthModal('signup'); setMobileMenuOpen(false); }}
                     className="w-full py-3.5 bg-neutral-100 hover:bg-neutral-200 text-black text-center font-sans text-xs font-bold uppercase rounded-2xl tracking-wider border border-neutral-200"
                   >
-                    JOIN RAYLUX (CREATE ACCOUNT)
+                    JOIN RAYLUXX (CREATE ACCOUNT)
                   </button>
                 </div>
               )}
@@ -578,7 +578,7 @@ export const Navbar: React.FC = () => {
 
             <div className="flex justify-between items-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest pt-1">
               <span>WORLDWIDE DISPATCH</span>
-              <span>RAYLUX LAB</span>
+              <span>RAYLUXX LAB</span>
             </div>
           </div>
         </div>

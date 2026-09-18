@@ -56,7 +56,7 @@ export const Footer: React.FC = () => {
               </div>
               {subscribed && (
                 <p className="font-sans text-xs text-emerald-400 font-medium pl-3">
-                  ✓ Success! You're subscribed to Raylux Member Drops.
+                  ✓ Success! You're subscribed to Rayluxx Member Drops.
                 </p>
               )}
             </form>
@@ -115,7 +115,7 @@ export const Footer: React.FC = () => {
               <li className="hover:text-white cursor-pointer transition-colors" onClick={() => alert('Cap Sizing: S/M fits 54-57cm. L/XL fits 58-61cm. Adjustable fits 54-62cm.')}>
                 Cap Size Guide
               </li>
-              <li className="hover:text-white cursor-pointer transition-colors" onClick={() => alert('Customer Care: support@raylux.com (Mon-Fri 9AM-6PM EST)')}>
+              <li className="hover:text-white cursor-pointer transition-colors" onClick={() => alert('Customer Care: support@rayluxx.com (Mon-Fri 9AM-6PM EST) • rayluxx.com')}>
                 Contact Customer Care
               </li>
             </ul>
@@ -184,7 +184,7 @@ export const Footer: React.FC = () => {
         {/* Big Watermark */}
         <div className="pt-10 pb-6 select-none text-center">
           <span className="font-nike text-6xl sm:text-8xl lg:text-9xl font-black uppercase text-neutral-900 tracking-tighter block">
-            RAYLUX
+            RAYLUXX
           </span>
         </div>
 
@@ -193,7 +193,7 @@ export const Footer: React.FC = () => {
           <div className="flex items-center gap-2 text-neutral-400">
             <MapPin size={13} />
             <span>United States</span>
-            <span>© {new Date().getFullYear()} RAYLUX, Inc. All Rights Reserved</span>
+            <span>© {new Date().getFullYear()} RAYLUXX, Inc. All Rights Reserved • rayluxx.com</span>
           </div>
           <div className="flex flex-wrap gap-5">
             <span className="hover:text-white cursor-pointer">Guides</span>

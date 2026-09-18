@@ -178,7 +178,7 @@ export const DashboardPage: React.FC = () => {
 
           <div className="space-y-2">
             <span className="font-sans text-xs font-bold uppercase tracking-widest text-neutral-400">
-              RAYLUX MEMBER PORTAL
+              RAYLUXX MEMBER PORTAL
             </span>
             <h2 className="font-nike text-3xl sm:text-4xl font-black uppercase tracking-tight text-black">
               SIGN IN TO ACCESS YOUR ACCOUNT
@@ -200,7 +200,7 @@ export const DashboardPage: React.FC = () => {
               onClick={() => openAuthModal('signup')}
               className="w-full py-3.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all"
             >
-              Join Raylux (Create Account)
+              Join Rayluxx (Create Account)
             </button>
           </div>
 
@@ -227,7 +227,7 @@ export const DashboardPage: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="text-xs text-neutral-500 uppercase tracking-wider flex items-center gap-2 font-medium">
-              <button onClick={goToHome} className="hover:text-black">RAYLUX</button>
+              <button onClick={goToHome} className="hover:text-black">RAYLUXX</button>
               <span>/</span>
               <span>MEMBER PORTAL</span>
               <span>/</span>

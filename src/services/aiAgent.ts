@@ -5,9 +5,9 @@ export const DEFAULT_AI_CONFIG: AIAgentConfig = {
   enabled: true,
   model: 'gemini-3.8-flash',
   apiKey: '',
-  systemPrompt: `You are the RAYLUX INTELLIGENCE AGENT — an ultra-responsive, architectural technical headwear specialist.
+  systemPrompt: `You are the RAYLUXX INTELLIGENCE AGENT (rayluxx.com) — an ultra-responsive, architectural technical headwear specialist.
 Tone: Concise, premium, technical, authoritative (Nike Tech / Acronym aesthetic).
-You know the full Raylux catalog:
+You know the full Rayluxx catalog:
 - MONOLITH 01 (Onyx, L/XL 58-61cm, $195 / £154)
 - APEX STORM GORE-TEX 3L (All-weather waterproof membrane, $195 / £154)
 - ARCHETYPE 03 (Bone, S/M 54-57cm, $160 / £126)
@@ -15,7 +15,7 @@ You know the full Raylux catalog:
 Shipping: Free Worldwide Express over $150 USD or £120 GBP. Carriers: DHL Express & FedEx Priority.
 Returns: 30-Day Risk-Free Archival Exchange.
 Currencies: Full native support for USD ($) and GBP (£).`,
-  welcomeMessage: 'RAYLUX INTELLIGENCE ONLINE // Ask about sizing specs, GORE-TEX care, order waybills, or currency rates.',
+  welcomeMessage: 'RAYLUXX INTELLIGENCE ONLINE // Ask about sizing specs, GORE-TEX care, order waybills, or currency rates at rayluxx.com.',
   enableOrderLookup: true,
   enableTicketCreation: true,
 };
@@ -42,7 +42,7 @@ export function saveAIAgentConfig(config: AIAgentConfig): void {
   }
 }
 
-export async function queryRayluxAgent(
+export async function queryRayluxxAgent(
   userPrompt: string,
   orders: Order[],
   currency: 'USD' | 'GBP' | 'EUR',
@@ -76,7 +76,7 @@ export async function queryRayluxAgent(
 
   // 2. Sizing Specs
   if (promptLower.includes('size') || promptLower.includes('fit') || promptLower.includes('measurement')) {
-    return `[RAYLUX ANATOMICAL FIT GUIDE]\n\n• S/M (Small / Medium): Fits head circumferences 54 – 57 CM (21.2 – 22.4 IN). Tailored for low-profile crown depth.\n• L/XL (Large / Extra Large): Fits head circumferences 58 – 61 CM (22.8 – 24.0 IN). Engineered with deeper apex ergonomics.\n• ONE SIZE (Adjustable): Features high-tensile magnetic buckle and mil-spec webbing for 54 – 62 CM range.\n\nComplimentary size exchanges are included under our 30-Day Archival Policy.`;
+    return `[RAYLUXX ANATOMICAL FIT GUIDE]\n\n• S/M (Small / Medium): Fits head circumferences 54 – 57 CM (21.2 – 22.4 IN). Tailored for low-profile crown depth.\n• L/XL (Large / Extra Large): Fits head circumferences 58 – 61 CM (22.8 – 24.0 IN). Engineered with deeper apex ergonomics.\n• ONE SIZE (Adjustable): Features high-tensile magnetic buckle and mil-spec webbing for 54 – 62 CM range.\n\nComplimentary size exchanges are included under our 30-Day Archival Policy.`;
   }
 
   // 3. GORE-TEX & Waterproof Material Tech
@@ -98,7 +98,7 @@ export async function queryRayluxAgent(
 
   // 6. Returns & Warranty
   if (promptLower.includes('return') || promptLower.includes('refund') || promptLower.includes('exchange') || promptLower.includes('warranty')) {
-    return `[30-DAY ARCHIVAL RETURN POLICY]\n\nAll unworn Raylux silhouettes in original packaging with intact security seals qualify for complimentary returns or exchanges within 30 days of arrival. You can generate a return waybill directly from your Member Dashboard or open a Support Ticket.`;
+    return `[30-DAY ARCHIVAL RETURN POLICY]\n\nAll unworn Rayluxx silhouettes in original packaging with intact security seals qualify for complimentary returns or exchanges within 30 days of arrival. You can generate a return waybill directly from your Member Dashboard or open a Support Ticket at rayluxx.com.`;
   }
 
   // 7. Support Ticket Query
@@ -137,8 +137,10 @@ export async function queryRayluxAgent(
   }
 
   // Default Technical Assistant response
-  return `RAYLUX INTELLIGENCE // Model: ${config.model.toUpperCase()}\n\nThank you for reaching out. We specialize in architectural technical headwear engineered with GORE-TEX® 3L and CORDURA® textiles.\n\nHow may I assist you further? You can ask about:\n• Sizing & ergonomic crown fit (S/M vs L/XL)\n• Order tracking waybills (share your RLX order number)\n• USD / GBP currency conversions\n• Global dispatch timelines and return protocols`;
+  return `RAYLUXX INTELLIGENCE // Model: ${config.model.toUpperCase()}\n\nThank you for reaching out to RAYLUXX (rayluxx.com). We specialize in architectural technical headwear engineered with GORE-TEX® 3L and CORDURA® textiles.\n\nHow may I assist you further? You can ask about:\n• Sizing & ergonomic crown fit (S/M vs L/XL)\n• Order tracking waybills (share your RLX order number)\n• USD / GBP currency conversions\n• Global dispatch timelines and return protocols`;
 }
+
+export const queryRayluxAgent = queryRayluxxAgent;
 
 export const askGeminiAgent = (
   userPrompt: string,
@@ -146,4 +148,4 @@ export const askGeminiAgent = (
   currency: 'USD' | 'GBP' | 'EUR' = 'USD',
   exchangeRate: number = 0.79,
   config = getAIAgentConfig()
-) => queryRayluxAgent(userPrompt, orders, currency, exchangeRate, config);
+) => queryRayluxxAgent(userPrompt, orders, currency, exchangeRate, config);

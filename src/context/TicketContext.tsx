@@ -43,7 +43,7 @@ const DEFAULT_TICKETS: SupportTicket[] = [
       {
         id: 'msg-2',
         sender: 'support',
-        senderName: 'Raylux Ops Specialist',
+        senderName: 'Rayluxx Ops Specialist',
         message: 'Hello Marcus. For GORE-TEX 3L editions, machine wash on cold/delicate (30°C max) using liquid technical detergent. Line dry away from direct heat sources to preserve seam bonding.',
         timestamp: 'Sep 15, 2026 • 02:20 PM',
       },

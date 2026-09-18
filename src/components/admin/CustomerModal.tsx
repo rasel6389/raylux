@@ -133,7 +133,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 id="customer-email-input"
                 type="email"
                 required
-                placeholder="client@raylux.com"
+                placeholder="client@rayluxx.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 placeholder-neutral-400 focus:bg-white focus:outline-none focus:border-black font-medium"

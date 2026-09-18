@@ -201,7 +201,7 @@ export const CheckoutPage: React.FC = () => {
             <span>Back to Bag</span>
           </button>
           <span className="font-nike text-3xl font-black tracking-tighter text-black">
-            RAYLUX
+            RAYLUXX
           </span>
           <div className="flex items-center gap-1.5 text-xs font-sans text-neutral-500">
             <Lock size={13} />
@@ -582,7 +582,7 @@ export const CheckoutPage: React.FC = () => {
                     )}
                   </button>
                   <p className="font-sans text-[11px] text-neutral-500 text-center mt-3">
-                    By clicking Place Order, you confirm acceptance of RAYLUX Terms of Sale & Privacy Policy.
+                    By clicking Place Order, you confirm acceptance of RAYLUXX Terms of Sale & Privacy Policy.
                   </p>
                 </div>
 
@@ -637,7 +637,7 @@ export const CheckoutPage: React.FC = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="PROMO CODE (e.g. RAYLUX10)"
+                      placeholder="PROMO CODE (e.g. RAYLUXX10)"
                       value={promoInput}
                       onChange={(e) => setPromoInput(e.target.value)}
                       className="flex-1 bg-white border border-neutral-300 px-3 py-2.5 text-xs font-mono uppercase focus:outline-none focus:border-black rounded-sm"

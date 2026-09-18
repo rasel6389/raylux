@@ -185,7 +185,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const loginAdmin = (pass: string) => {
     const cleaned = pass.trim();
-    if (cleaned === 'raylux2026' || cleaned === 'admin') {
+    if (cleaned === 'rayluxx2026' || cleaned === 'raylux2026' || cleaned === 'admin') {
       setIsAdminLoggedIn(true);
       try {
         localStorage.setItem('raylux_admin_auth', 'true');

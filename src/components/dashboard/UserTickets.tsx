@@ -67,7 +67,7 @@ export const UserTickets: React.FC = () => {
             SUPPORT TICKETS ({userTickets.length})
           </h2>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Direct communication channel with Raylux product specialists and dispatch operations.
+            Direct communication channel with Rayluxx product specialists and dispatch operations.
           </p>
         </div>
 
@@ -198,7 +198,7 @@ export const UserTickets: React.FC = () => {
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') handleSendReply(tck.id);
                             }}
-                            placeholder="Type reply to Raylux support operations..."
+                            placeholder="Type reply to Rayluxx support operations..."
                             className="flex-1 border border-neutral-300 rounded-full px-4 py-2.5 text-xs bg-white focus:outline-none focus:border-black"
                           />
                           <button

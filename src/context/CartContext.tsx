@@ -106,7 +106,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const applyPromoCode = (code: string) => {
     const cleaned = code.trim().toUpperCase();
-    if (cleaned === 'RAYLUX10' || cleaned === 'NIKE10') {
+    if (cleaned === 'RAYLUXX10' || cleaned === 'RAYLUX10' || cleaned === 'NIKE10') {
       setPromoCode(cleaned);
       setDiscountPercent(0.10);
       return { success: true, message: '10% ARCHIVE DISCOUNT APPLIED' };
