@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "deploy": "tsc && vite build && npx firebase-tools deploy --only hosting"
+    "deploy": "tsc && vite build && npx -y firebase-tools deploy --only hosting"
   },
   "dependencies": {
     "clsx": "^2.1.1",
