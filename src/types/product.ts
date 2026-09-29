@@ -100,6 +100,28 @@ export interface HeroBannerConfig {
   titleSize?: 'standard' | 'massive' | 'monumental';
   primaryBtnStyle?: 'white' | 'black' | 'outline';
   secondaryBtnStyle?: 'outline' | 'ghost' | 'glass';
+  blockOrder?: HeroBlockType[];
+}
+
+export type HeroBlockType = 'badge' | 'super_title' | 'headline' | 'description' | 'buttons';
+
+export type PageSectionType =
+  | 'hero'
+  | 'ticker'
+  | 'products_grid'
+  | 'editorial_split'
+  | 'category_spotlight'
+  | 'lookbook_showcase'
+  | 'testimonials'
+  | 'newsletter'
+  | 'custom_banner';
+
+export interface PageSectionItem {
+  id: string;
+  type: PageSectionType;
+  title: string;
+  active: boolean;
+  settings?: Record<string, any>;
 }
 
 export interface EditorialSectionConfig {

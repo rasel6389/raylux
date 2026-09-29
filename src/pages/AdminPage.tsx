@@ -48,11 +48,20 @@ import {
   Type,
   Image as ImageIcon,
   Shield,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  Star,
+  Mail,
+  Camera,
+  Grid,
 } from 'lucide-react';
 import { useTickets } from '../context/TicketContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { getAIAgentConfig, saveAIAgentConfig, askGeminiAgent } from '../services/aiAgent';
 import { AIAgentConfig, SupportTicket } from '../types/ticket';
+import { PageSectionItem, PageSectionType, HeroBlockType } from '../types/product';
+import { DEFAULT_PAGE_SECTIONS } from '../context/StoreContext';
 
 interface PromoCodeItem {
   code: string;
@@ -104,6 +113,9 @@ export const AdminPage: React.FC = () => {
     tickerConfig,
     updateTickerConfig,
     resetTickerConfig,
+    pageSections,
+    updatePageSections,
+    resetPageSections,
   } = useStore();
   const {
     registeredUsers,
@@ -142,14 +154,26 @@ export const AdminPage: React.FC = () => {
   const [selectedInspectOrder, setSelectedInspectOrder] = useState<Order | null>(null);
   const [inspectCustomer, setInspectCustomer] = useState<User | null>(null);
 
-  // WordPress-Style Visual Theme Customizer State
-  const [cmsSubTab, setCmsSubTab] = useState<'hero' | 'editorial' | 'announcement'>('hero');
+  // WordPress-Style Visual Theme Customizer & Drag-and-Drop Page Builder State
+  const [cmsSubTab, setCmsSubTab] = useState<'builder' | 'hero' | 'editorial' | 'announcement'>('builder');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [editSections, setEditSections] = useState<PageSectionItem[]>(pageSections);
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
+  const [dragOverSectionIndex, setDragOverSectionIndex] = useState<number | null>(null);
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
+
+  const [draggedHeroBlockIndex, setDraggedHeroBlockIndex] = useState<number | null>(null);
+  const [dragOverHeroBlockIndex, setDragOverHeroBlockIndex] = useState<number | null>(null);
+
   const [editHero, setEditHero] = useState(heroConfig);
   const [editAnnouncement, setEditAnnouncement] = useState(announcementConfig);
   const [editEditorial, setEditEditorial] = useState(editorialConfig);
   const [editTicker, setEditTicker] = useState(tickerConfig);
   const [newTickerItem, setNewTickerItem] = useState('');
+
+  useEffect(() => {
+    setEditSections(pageSections);
+  }, [pageSections]);
 
   useEffect(() => {
     setEditHero(heroConfig);
@@ -494,16 +518,156 @@ export const AdminPage: React.FC = () => {
     updateAnnouncementConfig(editAnnouncement);
     updateEditorialConfig(editEditorial);
     updateTickerConfig(editTicker);
-    showNotice('Storefront Architecture & Hero CMS published live to storefront!');
+    updatePageSections(editSections);
+    showNotice('Storefront Architecture & Drag-and-Drop Page Layout published live!');
   };
 
   const handleResetHeroBanner = () => {
-    if (confirm('Reset Storefront Hero Banner, Editorial section, and Ticker to factory defaults?')) {
+    if (confirm('Reset Storefront Page Layout, Hero Banner, Editorial, and Ticker to factory defaults?')) {
       resetHeroConfig();
       resetEditorialConfig();
       resetTickerConfig();
+      resetPageSections();
+      setEditSections(DEFAULT_PAGE_SECTIONS);
       showNotice('Storefront architecture reset to factory defaults.');
     }
+  };
+
+  // Section Drag & Drop Reordering Handlers
+  const handleDragStartSection = (index: number) => {
+    setDraggedSectionIndex(index);
+  };
+
+  const handleDragOverSection = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragOverSectionIndex !== index) {
+      setDragOverSectionIndex(index);
+    }
+  };
+
+  const handleDropSection = (targetIndex: number) => {
+    if (draggedSectionIndex === null || draggedSectionIndex === targetIndex) {
+      setDraggedSectionIndex(null);
+      setDragOverSectionIndex(null);
+      return;
+    }
+    const updated = Array.from(editSections);
+    const [removed] = updated.splice(draggedSectionIndex, 1);
+    updated.splice(targetIndex, 0, removed);
+    setEditSections(updated);
+    setDraggedSectionIndex(null);
+    setDragOverSectionIndex(null);
+    showNotice(`Moved section to position #${targetIndex + 1}`);
+  };
+
+  const handleMoveSection = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= editSections.length) return;
+    const updated = Array.from(editSections);
+    const [removed] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, removed);
+    setEditSections(updated);
+    showNotice(`Moved section ${direction === 'up' ? 'up' : 'down'}`);
+  };
+
+  const handleToggleSection = (id: string) => {
+    setEditSections(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+  };
+
+  const handleDeleteSection = (id: string) => {
+    if (editSections.length <= 1) {
+      alert('You must have at least one active section on the homepage.');
+      return;
+    }
+    const target = editSections.find(s => s.id === id);
+    if (confirm(`Remove "${target?.title || 'Section'}" from the homepage layout?`)) {
+      setEditSections(prev => prev.filter(s => s.id !== id));
+      showNotice('Section removed from layout.');
+    }
+  };
+
+  const handleAddSectionToPage = (type: PageSectionType) => {
+    const newId = `sec-${type}-${Date.now().toString(36)}`;
+    const titlesMap: Record<PageSectionType, string> = {
+      hero: 'Monumental Hero Canvas',
+      ticker: 'Scrolling Spec Ticker',
+      products_grid: 'New Arrivals Product Grid',
+      editorial_split: 'Philosophy & Technical Specs',
+      category_spotlight: 'Curated Pillars Spotlight',
+      lookbook_showcase: 'Cinematic Lookbook Banner',
+      testimonials: 'Client Testimonials & Press',
+      newsletter: 'VIP Vault Dispatch Form',
+      custom_banner: 'Custom Promotion Banner',
+    };
+    const newSection: PageSectionItem = {
+      id: newId,
+      type,
+      title: titlesMap[type] || 'New Section',
+      active: true,
+      settings: type === 'products_grid' ? {
+        superTitle: 'THE LATEST DROPS',
+        title: 'NEW ARRIVALS',
+        productCount: 4,
+        showExploreAll: true,
+      } : type === 'lookbook_showcase' ? {
+        tag: 'ARCHITECTURAL EDITORIAL // 2026',
+        title: 'MONOLITH FIELD STUDY',
+        subtitle: 'Engineered for high-altitude brutalist topography and extreme precipitation endurance.',
+        buttonText: 'EXPLORE FULL LOOKBOOK',
+        imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1600&q=85',
+      } : type === 'newsletter' ? {
+        superTitle: 'EXCLUSIVE ACCESS',
+        title: 'JOIN THE RAYLUXX GUILD',
+        subtitle: 'Receive priority allocation notices 48 hours prior to public drops.',
+      } : type === 'custom_banner' ? {
+        superTitle: 'LIMITED ALLOCATION',
+        title: 'GLOBAL COLD-CLIMATE ARCHIVE',
+        subtitle: 'Bonded 3-layer seams rated for sub-zero wind chills.',
+        buttonText: 'DISCOVER ARCHIVE',
+      } : {},
+    };
+    setEditSections(prev => [...prev, newSection]);
+    showNotice(`Added "${newSection.title}" to page layout!`);
+  };
+
+  const handleUpdateSectionSetting = (id: string, key: string, val: any) => {
+    setEditSections(prev => prev.map(s => {
+      if (s.id !== id) return s;
+      return {
+        ...s,
+        settings: {
+          ...(s.settings || {}),
+          [key]: val,
+        },
+      };
+    }));
+  };
+
+  // Hero internal blocks drag & drop
+  const heroBlocksOrder: HeroBlockType[] = editHero.blockOrder || ['badge', 'super_title', 'headline', 'description', 'buttons'];
+
+  const handleMoveHeroBlock = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= heroBlocksOrder.length) return;
+    const updated = Array.from(heroBlocksOrder);
+    const [removed] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, removed);
+    setEditHero({ ...editHero, blockOrder: updated });
+  };
+
+  const handleDropHeroBlock = (targetIndex: number) => {
+    if (draggedHeroBlockIndex === null || draggedHeroBlockIndex === targetIndex) {
+      setDraggedHeroBlockIndex(null);
+      setDragOverHeroBlockIndex(null);
+      return;
+    }
+    const updated = Array.from(heroBlocksOrder);
+    const [removed] = updated.splice(draggedHeroBlockIndex, 1);
+    updated.splice(targetIndex, 0, removed);
+    setEditHero({ ...editHero, blockOrder: updated });
+    setDraggedHeroBlockIndex(null);
+    setDragOverHeroBlockIndex(null);
+    showNotice(`Reordered hero element`);
   };
 
   const handleTestAiQuery = async (e: React.FormEvent) => {
@@ -1359,6 +1523,18 @@ export const AdminPage: React.FC = () => {
               <div className="flex border-b border-neutral-200 gap-2 overflow-x-auto">
                 <button
                   type="button"
+                  onClick={() => setCmsSubTab('builder')}
+                  className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    cmsSubTab === 'builder'
+                      ? 'border-black text-black'
+                      : 'border-transparent text-neutral-400 hover:text-black'
+                  }`}
+                >
+                  <Layers size={15} />
+                  <span>1. ⚡ Drag & Drop Page Builder</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setCmsSubTab('hero')}
                   className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     cmsSubTab === 'hero'
@@ -1367,7 +1543,7 @@ export const AdminPage: React.FC = () => {
                   }`}
                 >
                   <Layout size={15} />
-                  <span>1. Hero Banner Builder</span>
+                  <span>2. Hero Banner Builder</span>
                 </button>
                 <button
                   type="button"
@@ -1378,8 +1554,8 @@ export const AdminPage: React.FC = () => {
                       : 'border-transparent text-neutral-400 hover:text-black'
                   }`}
                 >
-                  <Layers size={15} />
-                  <span>2. Editorial Philosophy & Pillars</span>
+                  <Shield size={15} />
+                  <span>3. Editorial Philosophy & Pillars</span>
                 </button>
                 <button
                   type="button"
@@ -1391,7 +1567,7 @@ export const AdminPage: React.FC = () => {
                   }`}
                 >
                   <Sparkles size={15} />
-                  <span>3. Announcement & Marquee Ticker</span>
+                  <span>4. Announcement & Marquee Ticker</span>
                 </button>
               </div>
 
@@ -1409,11 +1585,15 @@ export const AdminPage: React.FC = () => {
 
                 {/* Device Frame Wrapper */}
                 <div className={`transition-all duration-300 mx-auto ${
-                  previewDevice === 'mobile' ? 'max-w-sm shadow-2xl rounded-[40px] border-8 border-neutral-900 overflow-hidden' : previewDevice === 'tablet' ? 'max-w-2xl shadow-xl rounded-3xl border-4 border-neutral-800 overflow-hidden' : 'w-full shadow-lg rounded-3xl overflow-hidden'
+                  previewDevice === 'mobile'
+                    ? 'max-w-sm shadow-2xl rounded-[40px] border-8 border-neutral-900 overflow-hidden'
+                    : previewDevice === 'tablet'
+                    ? 'max-w-2xl shadow-xl rounded-3xl border-4 border-neutral-800 overflow-hidden'
+                    : 'w-full shadow-lg rounded-3xl overflow-hidden'
                 }`}>
                   
-                  {/* Hero Live Preview Render */}
-                  <div className={`relative w-full ${previewDevice === 'mobile' ? 'h-[500px]' : previewDevice === 'tablet' ? 'h-[440px]' : 'h-96 sm:h-[460px]'} bg-black text-white p-6 sm:p-10 flex flex-col justify-between overflow-hidden select-none`}>
+                  {/* Hero Live Preview Render (Shown in Hero/Editorial/Announcement or as top element) */}
+                  <div className={`relative w-full ${previewDevice === 'mobile' ? 'h-[460px]' : previewDevice === 'tablet' ? 'h-[420px]' : 'h-96 sm:h-[440px]'} bg-black text-white p-6 sm:p-10 flex flex-col justify-between overflow-hidden select-none`}>
                     
                     {/* Background Image with Dynamic Overlay */}
                     {editHero.layoutStyle !== 'split-editorial' && (
@@ -1526,12 +1706,635 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* EDIT FORM PANELS ACCORDING TO SUB-TAB */}
+              {/* SUB-TAB 1: DRAG & DROP PAGE BUILDER (WORDPRESS/ELEMENTOR STYLE) */}
+              {cmsSubTab === 'builder' && (
+                <div className="space-y-8 animate-fadeIn">
+                  <div className="bg-neutral-900 text-white p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                          WORDPRESS & ELEMENTOR STYLE PAGE BUILDER
+                        </span>
+                      </div>
+                      <h3 className="font-nike text-xl sm:text-2xl font-black uppercase tracking-tight">
+                        HOMEPAGE SECTION ARCHITECTURE
+                      </h3>
+                      <p className="text-xs text-neutral-400 max-w-2xl mt-1">
+                        Drag and drop sections to rearrange the layout of your storefront. Click settings (⚙) on any card to edit content inline, or toggle visibility with the eye icon.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="px-3.5 py-2 bg-neutral-800 rounded-full text-xs font-mono font-bold text-neutral-300">
+                        {editSections.filter((s) => s.active).length} / {editSections.length} Sections Active
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    {/* Left Column: Draggable Sections List */}
+                    <div className="lg:col-span-7 space-y-4">
+                      <div className="flex items-center justify-between pb-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                          <GripVertical size={16} />
+                          <span>Storefront Sections (Drag & Drop to Reorder)</span>
+                        </h4>
+                        <span className="text-[10px] text-neutral-400">Drag handle or click ▲ ▼ to move</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {editSections.map((section, idx) => {
+                          const isDragging = draggedSectionIndex === idx;
+                          const isDragOver = dragOverSectionIndex === idx;
+                          const isExpanded = expandedSectionId === section.id;
+
+                          return (
+                            <div
+                              key={section.id}
+                              draggable
+                              onDragStart={() => handleDragStartSection(idx)}
+                              onDragOver={(e) => handleDragOverSection(e, idx)}
+                              onDrop={() => handleDropSection(idx)}
+                              className={`rounded-2xl border transition-all select-none ${
+                                isDragging
+                                  ? 'opacity-40 border-dashed border-black bg-neutral-100 scale-95 shadow-inner'
+                                  : isDragOver
+                                  ? 'border-2 border-black bg-neutral-50 shadow-lg scale-[1.01]'
+                                  : section.active
+                                  ? 'bg-white border-neutral-200 shadow-xs hover:border-neutral-300'
+                                  : 'bg-neutral-50 border-neutral-200/60 opacity-60'
+                              }`}
+                            >
+                              {/* Header Row */}
+                              <div className="p-4 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <div className="cursor-grab active:cursor-grabbing p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-black shrink-0" title="Drag to reorder">
+                                    <GripVertical size={18} />
+                                  </div>
+
+                                  <span className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-600 text-[10px] font-mono font-bold flex items-center justify-center shrink-0">
+                                    #{idx + 1}
+                                  </span>
+
+                                  <div className="p-2 rounded-xl bg-neutral-100 text-black shrink-0">
+                                    {section.type === 'hero' && <Layout size={16} />}
+                                    {section.type === 'ticker' && <Sparkles size={16} />}
+                                    {section.type === 'products_grid' && <Package size={16} />}
+                                    {section.type === 'editorial_split' && <Layers size={16} />}
+                                    {section.type === 'category_spotlight' && <Grid size={16} />}
+                                    {section.type === 'lookbook_showcase' && <Camera size={16} />}
+                                    {section.type === 'testimonials' && <Star size={16} />}
+                                    {section.type === 'newsletter' && <Mail size={16} />}
+                                    {section.type === 'custom_banner' && <Tag size={16} />}
+                                  </div>
+
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-nike text-sm font-bold uppercase text-black truncate block">
+                                        {section.title}
+                                      </span>
+                                      <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-500 font-bold shrink-0">
+                                        {section.type.replace('_', ' ')}
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] text-neutral-400 block truncate">
+                                      {section.type === 'hero' && 'Monumental hero banner with CTA'}
+                                      {section.type === 'ticker' && 'Live scrolling specifications marquee'}
+                                      {section.type === 'products_grid' && `${section.settings?.title || 'NEW ARRIVALS'} • ${section.settings?.productCount || 4} items`}
+                                      {section.type === 'editorial_split' && 'Brand manifesto, studio photo & pillars'}
+                                      {section.type === 'category_spotlight' && 'Shop by division category spotlight'}
+                                      {section.type === 'lookbook_showcase' && `${section.settings?.title || 'FIELD STUDY LOOKBOOK'}`}
+                                      {section.type === 'testimonials' && 'Verified client reviews & press quotes'}
+                                      {section.type === 'newsletter' && 'VIP drops allocation signup form'}
+                                      {section.type === 'custom_banner' && `${section.settings?.title || 'PROMOTIONAL BANNER'}`}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Actions Toolbar */}
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    disabled={idx === 0}
+                                    onClick={() => handleMoveSection(idx, 'up')}
+                                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 disabled:opacity-30 disabled:hover:bg-transparent text-neutral-600 transition-colors cursor-pointer"
+                                    title="Move Up"
+                                  >
+                                    <ChevronUp size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={idx === editSections.length - 1}
+                                    onClick={() => handleMoveSection(idx, 'down')}
+                                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 disabled:opacity-30 disabled:hover:bg-transparent text-neutral-600 transition-colors cursor-pointer"
+                                    title="Move Down"
+                                  >
+                                    <ChevronDown size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleSection(section.id)}
+                                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                      section.active
+                                        ? 'border-neutral-200 text-emerald-600 hover:bg-emerald-50'
+                                        : 'border-neutral-200 text-neutral-400 hover:bg-neutral-100'
+                                    }`}
+                                    title={section.active ? 'Section Visible (Click to Hide)' : 'Section Hidden (Click to Show)'}
+                                  >
+                                    {section.active ? <Eye size={14} /> : <EyeOff size={14} />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedSectionId(isExpanded ? null : section.id)}
+                                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                      isExpanded ? 'bg-black text-white border-black' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-100'
+                                    }`}
+                                    title="Edit Section Settings"
+                                  >
+                                    <Settings size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSection(section.id)}
+                                    className="p-1.5 rounded-lg border border-neutral-200 text-neutral-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors cursor-pointer"
+                                    title="Delete Section"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Inline Section Editor (When Expanded) */}
+                              {isExpanded && (
+                                <div className="p-4 pt-0 border-t border-neutral-100 mt-2 space-y-4 bg-neutral-50/60 rounded-b-2xl">
+                                  <div className="pt-3">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-2">
+                                      Configure {section.title}
+                                    </span>
+
+                                    {/* Section Title Rename */}
+                                    <div className="mb-3">
+                                      <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                        Section Label in Admin
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={section.title}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditSections((prev) =>
+                                            prev.map((s) => (s.id === section.id ? { ...s, title: val } : s))
+                                          );
+                                        }}
+                                        className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black focus:outline-none focus:border-black"
+                                      />
+                                    </div>
+
+                                    {/* Conditional Editor for Products Grid */}
+                                    {section.type === 'products_grid' && (
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Super Title
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={section.settings?.superTitle || 'THE LATEST DROPS'}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'superTitle', e.target.value.toUpperCase())}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Section Headline
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={section.settings?.title || 'NEW ARRIVALS'}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'title', e.target.value.toUpperCase())}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Number of Products
+                                          </label>
+                                          <select
+                                            value={section.settings?.productCount || 4}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'productCount', parseInt(e.target.value, 10))}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black"
+                                          >
+                                            <option value={4}>4 Products (Single Row)</option>
+                                            <option value={8}>8 Products (Two Rows)</option>
+                                          </select>
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-5">
+                                          <input
+                                            type="checkbox"
+                                            id={`explore-${section.id}`}
+                                            checked={section.settings?.showExploreAll !== false}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'showExploreAll', e.target.checked)}
+                                            className="rounded cursor-pointer"
+                                          />
+                                          <label htmlFor={`explore-${section.id}`} className="text-xs font-bold text-neutral-700 cursor-pointer">
+                                            Show "Explore All" link
+                                          </label>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Conditional Editor for Lookbook */}
+                                    {section.type === 'lookbook_showcase' && (
+                                      <div className="space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                          <div>
+                                            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                              Badge Tag
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={section.settings?.tag || 'ARCHITECTURAL EDITORIAL // 2026'}
+                                              onChange={(e) => handleUpdateSectionSetting(section.id, 'tag', e.target.value.toUpperCase())}
+                                              className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                              Main Headline
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={section.settings?.title || 'MONOLITH FIELD STUDY'}
+                                              onChange={(e) => handleUpdateSectionSetting(section.id, 'title', e.target.value.toUpperCase())}
+                                              className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Narrative Subtitle
+                                          </label>
+                                          <textarea
+                                            rows={2}
+                                            value={section.settings?.subtitle || ''}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'subtitle', e.target.value)}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-800"
+                                          />
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                          <div>
+                                            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                              Button Text
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={section.settings?.buttonText || 'EXPLORE FULL LOOKBOOK'}
+                                              onChange={(e) => handleUpdateSectionSetting(section.id, 'buttonText', e.target.value.toUpperCase())}
+                                              className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                              Background Photo URL
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={section.settings?.imageUrl || ''}
+                                              onChange={(e) => handleUpdateSectionSetting(section.id, 'imageUrl', e.target.value)}
+                                              className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Conditional Editor for Newsletter */}
+                                    {section.type === 'newsletter' && (
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Super Title
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={section.settings?.superTitle || 'EXCLUSIVE ACCESS'}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'superTitle', e.target.value.toUpperCase())}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Headline
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={section.settings?.title || 'JOIN THE RAYLUXX GUILD'}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'title', e.target.value.toUpperCase())}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                          />
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Description Subtitle
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={section.settings?.subtitle || ''}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'subtitle', e.target.value)}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-800"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Conditional Editor for Custom Banner */}
+                                    {section.type === 'custom_banner' && (
+                                      <div className="space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                          <div>
+                                            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                              Category Tag
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={section.settings?.superTitle || 'LIMITED ALLOCATION'}
+                                              onChange={(e) => handleUpdateSectionSetting(section.id, 'superTitle', e.target.value.toUpperCase())}
+                                              className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                              Banner Headline
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={section.settings?.title || 'GLOBAL COLD-CLIMATE ARCHIVE'}
+                                              onChange={(e) => handleUpdateSectionSetting(section.id, 'title', e.target.value.toUpperCase())}
+                                              className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Description Text
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={section.settings?.subtitle || ''}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'subtitle', e.target.value)}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-800"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                                            Button Label
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={section.settings?.buttonText || 'DISCOVER ARCHIVE'}
+                                            onChange={(e) => handleUpdateSectionSetting(section.id, 'buttonText', e.target.value.toUpperCase())}
+                                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold text-black uppercase"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Direct jump links for specialized tabs */}
+                                    {section.type === 'hero' && (
+                                      <div className="p-3 bg-neutral-100 rounded-xl flex items-center justify-between">
+                                        <span className="text-xs text-neutral-600 font-medium">Hero banner layout, presets, and sliders are in Tab 2.</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => setCmsSubTab('hero')}
+                                          className="px-3 py-1.5 bg-black text-white rounded-full text-xs font-bold hover:bg-neutral-800 transition-colors"
+                                        >
+                                          Open Hero Builder →
+                                        </button>
+                                      </div>
+                                    )}
+                                    {section.type === 'editorial_split' && (
+                                      <div className="p-3 bg-neutral-100 rounded-xl flex items-center justify-between">
+                                        <span className="text-xs text-neutral-600 font-medium">Editorial studio photo, specs and 3 pillars are in Tab 3.</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => setCmsSubTab('editorial')}
+                                          className="px-3 py-1.5 bg-black text-white rounded-full text-xs font-bold hover:bg-neutral-800 transition-colors"
+                                        >
+                                          Open Philosophy CMS →
+                                        </button>
+                                      </div>
+                                    )}
+                                    {section.type === 'ticker' && (
+                                      <div className="p-3 bg-neutral-100 rounded-xl flex items-center justify-between">
+                                        <span className="text-xs text-neutral-600 font-medium">Manage ticker items and announcement bar in Tab 4.</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => setCmsSubTab('announcement')}
+                                          className="px-3 py-1.5 bg-black text-white rounded-full text-xs font-bold hover:bg-neutral-800 transition-colors"
+                                        >
+                                          Open Ticker CMS →
+                                        </button>
+                                      </div>
+                                    )}
+
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Right Column: Pre-built Section Palette (WordPress Elementor Library) */}
+                    <div className="lg:col-span-5 space-y-4">
+                      <div className="flex items-center justify-between pb-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                          <Plus size={16} />
+                          <span>Add Pre-Built Blocks (Elementor Library)</span>
+                        </h4>
+                        <span className="text-[10px] text-neutral-400">Click + Add to insert</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {[
+                          {
+                            type: 'hero' as PageSectionType,
+                            icon: Layout,
+                            title: 'Hero Banner Canvas',
+                            desc: 'Monumental full-bleed architectural banner with CTA buttons.',
+                          },
+                          {
+                            type: 'ticker' as PageSectionType,
+                            icon: Sparkles,
+                            title: 'Spec Marquee Ticker',
+                            desc: 'Live animated scrolling technical specifications ticker.',
+                          },
+                          {
+                            type: 'products_grid' as PageSectionType,
+                            icon: Package,
+                            title: 'Product Catalog Grid',
+                            desc: 'Responsive 4-column product drops showcase with pricing.',
+                          },
+                          {
+                            type: 'editorial_split' as PageSectionType,
+                            icon: Layers,
+                            title: 'Philosophy & Technical Specs',
+                            desc: 'Brand manifesto, studio photo, spec badge, and 3 pillars.',
+                          },
+                          {
+                            type: 'category_spotlight' as PageSectionType,
+                            icon: Grid,
+                            title: 'Curated Pillars Spotlight',
+                            desc: 'Shop by division category tiles (Structured, Technical, Camp).',
+                          },
+                          {
+                            type: 'lookbook_showcase' as PageSectionType,
+                            icon: Camera,
+                            title: 'Cinematic Lookbook Banner',
+                            desc: 'Full-width high-contrast field study photography with CTA.',
+                          },
+                          {
+                            type: 'testimonials' as PageSectionType,
+                            icon: Star,
+                            title: 'Client Reviews & Press',
+                            desc: 'Verified client reviews, star ratings, and endurance quotes.',
+                          },
+                          {
+                            type: 'newsletter' as PageSectionType,
+                            icon: Mail,
+                            title: 'VIP Vault Dispatch Form',
+                            desc: 'Email capture card for priority drop allocation notices.',
+                          },
+                          {
+                            type: 'custom_banner' as PageSectionType,
+                            icon: Tag,
+                            title: 'Promotional Callout Banner',
+                            desc: 'Dark high-impact callout card with custom headline & button.',
+                          },
+                        ].map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <div
+                              key={item.type}
+                              className="p-4 bg-white border border-neutral-200 rounded-2xl flex items-center justify-between gap-4 shadow-xs hover:border-black transition-all group"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="p-2.5 rounded-xl bg-neutral-100 text-black group-hover:bg-black group-hover:text-white transition-colors shrink-0">
+                                  <Icon size={18} />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="font-nike text-sm font-bold uppercase text-black block truncate">
+                                    {item.title}
+                                  </span>
+                                  <span className="text-[11px] text-neutral-500 line-clamp-1 leading-tight">
+                                    {item.desc}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleAddSectionToPage(item.type)}
+                                className="px-3.5 py-1.5 bg-neutral-100 hover:bg-black text-neutral-800 hover:text-white rounded-full text-xs font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+                              >
+                                <Plus size={13} />
+                                <span>Add</span>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-TAB 2: HERO BANNER BUILDER */}
               {cmsSubTab === 'hero' && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                   
                   {/* Left Column: Visual Layout, Geometry & Typography */}
                   <div className="lg:col-span-6 space-y-6">
+
+                    {/* Hero Elements Drag & Drop Arrangement Card */}
+                    <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                          <GripVertical size={15} />
+                          <span>Hero Elements Arrangement (Drag to Reorder)</span>
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-mono">5 Elements</span>
+                      </div>
+
+                      <p className="text-xs text-neutral-500">
+                        Drag elements up and down or click the ▲ ▼ arrows to change the vertical order inside the Hero Banner.
+                      </p>
+
+                      <div className="space-y-2">
+                        {heroBlocksOrder.map((blockType, idx) => {
+                          const labelsMap: Record<HeroBlockType, string> = {
+                            badge: 'Floating Status Badge',
+                            super_title: 'Category / Super Headline',
+                            headline: 'Monumental Main Title',
+                            description: 'Narrative Description',
+                            buttons: 'Action CTA Buttons',
+                          };
+
+                          return (
+                            <div
+                              key={blockType}
+                              draggable
+                              onDragStart={() => setDraggedHeroBlockIndex(idx)}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                if (dragOverHeroBlockIndex !== idx) setDragOverHeroBlockIndex(idx);
+                              }}
+                              onDrop={() => handleDropHeroBlock(idx)}
+                              className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+                                draggedHeroBlockIndex === idx
+                                  ? 'opacity-40 border-dashed border-black bg-neutral-100'
+                                  : dragOverHeroBlockIndex === idx
+                                  ? 'border-2 border-black bg-neutral-50 shadow-md'
+                                  : 'bg-neutral-50 border-neutral-200 hover:border-neutral-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <GripVertical size={16} className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-black shrink-0" />
+                                <span className="w-5 h-5 rounded-full bg-white text-neutral-700 text-[10px] font-mono font-bold flex items-center justify-center border border-neutral-200">
+                                  #{idx + 1}
+                                </span>
+                                <span className="font-nike text-xs font-bold uppercase text-black">
+                                  {labelsMap[blockType] || blockType}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => handleMoveHeroBlock(idx, 'up')}
+                                  className="p-1 rounded-md border border-neutral-200 hover:bg-white disabled:opacity-30 text-neutral-600 transition-colors"
+                                  title="Move Up"
+                                >
+                                  <ChevronUp size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === heroBlocksOrder.length - 1}
+                                  onClick={() => handleMoveHeroBlock(idx, 'down')}
+                                  className="p-1 rounded-md border border-neutral-200 hover:bg-white disabled:opacity-30 text-neutral-600 transition-colors"
+                                  title="Move Down"
+                                >
+                                  <ChevronDown size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                     
                     {/* 1. Layout Style Preset Picker */}
                     <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">

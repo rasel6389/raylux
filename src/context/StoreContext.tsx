@@ -6,12 +6,23 @@ import {
   HeroBannerConfig,
   AnnouncementConfig,
   EditorialSectionConfig,
-  MarqueeTickerConfig
+  MarqueeTickerConfig,
+  PageSectionItem,
+  PageSectionType,
+  HeroBlockType,
 } from '../types/product';
 import { MOCK_ORDERS, MOCK_INVENTORY } from '../data/dashboard';
 import { PRODUCTS } from '../data/products';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+
+export const DEFAULT_HERO_BLOCKS: { id: HeroBlockType; label: string; active: boolean }[] = [
+  { id: 'badge', label: 'Floating Status Badge', active: true },
+  { id: 'super_title', label: 'Category / Super Headline', active: true },
+  { id: 'headline', label: 'Monumental Main Title', active: true },
+  { id: 'description', label: 'Narrative Description', active: true },
+  { id: 'buttons', label: 'Action CTA Buttons', active: true },
+];
 
 export const DEFAULT_HERO_CONFIG: HeroBannerConfig = {
   badgeText: 'NEW RELEASE // MONOLITH SERIES 2026',
@@ -35,7 +46,85 @@ export const DEFAULT_HERO_CONFIG: HeroBannerConfig = {
   titleSize: 'monumental',
   primaryBtnStyle: 'white',
   secondaryBtnStyle: 'outline',
+  blockOrder: ['badge', 'super_title', 'headline', 'description', 'buttons'],
 };
+
+export const DEFAULT_PAGE_SECTIONS: PageSectionItem[] = [
+  {
+    id: 'sec-hero',
+    type: 'hero',
+    title: 'Monumental Hero Canvas',
+    active: true,
+  },
+  {
+    id: 'sec-ticker',
+    type: 'ticker',
+    title: 'Scrolling Spec Ticker',
+    active: true,
+  },
+  {
+    id: 'sec-products-grid',
+    type: 'products_grid',
+    title: 'New Arrivals Product Grid',
+    active: true,
+    settings: {
+      superTitle: 'THE LATEST DROPS',
+      title: 'NEW ARRIVALS',
+      productCount: 4,
+      showExploreAll: true,
+    },
+  },
+  {
+    id: 'sec-editorial',
+    type: 'editorial_split',
+    title: 'Philosophy & Technical Specs',
+    active: true,
+  },
+  {
+    id: 'sec-spotlight',
+    type: 'category_spotlight',
+    title: 'Shop by Division (Curated Pillars)',
+    active: true,
+    settings: {
+      superTitle: 'SHOP BY DIVISION',
+      title: 'CURATED PILLARS',
+    },
+  },
+  {
+    id: 'sec-lookbook',
+    type: 'lookbook_showcase',
+    title: 'Cinematic Lookbook Showcase',
+    active: true,
+    settings: {
+      tag: 'ARCHITECTURAL EDITORIAL // 2026',
+      title: 'MONOLITH FIELD STUDY',
+      subtitle: 'Engineered for high-altitude brutalist topography and extreme precipitation endurance.',
+      buttonText: 'EXPLORE FULL LOOKBOOK',
+      imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1600&q=85',
+    },
+  },
+  {
+    id: 'sec-testimonials',
+    type: 'testimonials',
+    title: 'Client Endorsements & Press',
+    active: true,
+    settings: {
+      superTitle: 'VERIFIED DISPATCH CLIENTS',
+      title: 'TESTED IN EXTREMES',
+    },
+  },
+  {
+    id: 'sec-newsletter',
+    type: 'newsletter',
+    title: 'VIP Vault Drops & Dispatch',
+    active: true,
+    settings: {
+      superTitle: 'EXCLUSIVE ACCESS',
+      title: 'JOIN THE RAYLUXX GUILD',
+      subtitle: 'Receive priority allocation notices 48 hours prior to public drops.',
+    },
+  },
+];
 
 export const DEFAULT_ANNOUNCEMENT_CONFIG: AnnouncementConfig = {
   active: true,
@@ -98,12 +187,21 @@ interface StoreContextType {
   tickerConfig: MarqueeTickerConfig;
   updateTickerConfig: (config: Partial<MarqueeTickerConfig>) => void;
   resetTickerConfig: () => void;
+  pageSections: PageSectionItem[];
+  updatePageSections: (sections: PageSectionItem[]) => void;
+  resetPageSections: () => void;
+  reorderSections: (startIndex: number, endIndex: number) => void;
+  toggleSectionActive: (id: string) => void;
+  updateSectionSettings: (id: string, newSettings: Record<string, any>) => void;
+  addSection: (type: PageSectionType, title?: string) => void;
+  deleteSection: (id: string) => void;
 }
 
 const ORDERS_KEY = 'raylux_orders_v2';
 const PRODUCTS_KEY = 'raylux_products_v2';
 const INVENTORY_KEY = 'raylux_inventory_v2';
 const WISHLIST_KEY = 'raylux_wishlist_v2';
+const PAGE_SECTIONS_KEY = 'raylux_page_sections_v2';
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
@@ -254,6 +352,132 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // ignore
     }
   }, [tickerConfig]);
+
+  const [pageSections, setPageSections] = useState<PageSectionItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(PAGE_SECTIONS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_PAGE_SECTIONS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PAGE_SECTIONS_KEY, JSON.stringify(pageSections));
+    } catch {
+      // ignore
+    }
+  }, [pageSections]);
+
+  const updatePageSections = (newSections: PageSectionItem[]) => {
+    setPageSections(newSections);
+  };
+
+  const resetPageSections = () => {
+    setPageSections(DEFAULT_PAGE_SECTIONS);
+    try {
+      localStorage.removeItem(PAGE_SECTIONS_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
+  const reorderSections = (startIndex: number, endIndex: number) => {
+    setPageSections((prev) => {
+      const result = Array.from(prev);
+      const [removed] = result.splice(startIndex, 1);
+      result.splice(endIndex, 0, removed);
+      return result;
+    });
+  };
+
+  const toggleSectionActive = (id: string) => {
+    setPageSections((prev) =>
+      prev.map((sec) => (sec.id === id ? { ...sec, active: !sec.active } : sec))
+    );
+  };
+
+  const updateSectionSettings = (id: string, newSettings: Record<string, any>) => {
+    setPageSections((prev) =>
+      prev.map((sec) =>
+        sec.id === id
+          ? { ...sec, settings: { ...(sec.settings || {}), ...newSettings } }
+          : sec
+      )
+    );
+  };
+
+  const addSection = (type: PageSectionType, title?: string) => {
+    const newId = `sec-${type}-${Date.now().toString(36)}`;
+    const titlesMap: Record<PageSectionType, string> = {
+      hero: 'Monumental Hero Canvas',
+      ticker: 'Scrolling Spec Ticker',
+      products_grid: 'Product Catalog Grid',
+      editorial_split: 'Philosophy & Technical Specs',
+      category_spotlight: 'Curated Pillars Spotlight',
+      lookbook_showcase: 'Cinematic Lookbook Showcase',
+      testimonials: 'Client Testimonials & Press',
+      newsletter: 'VIP Vault Dispatch Form',
+      custom_banner: 'Custom Promotion Banner',
+    };
+    const defaultSettingsMap: Record<PageSectionType, Record<string, any>> = {
+      hero: {},
+      ticker: {},
+      products_grid: {
+        superTitle: 'THE LATEST DROPS',
+        title: 'NEW ARRIVALS',
+        productCount: 4,
+        showExploreAll: true,
+      },
+      editorial_split: {},
+      category_spotlight: {
+        superTitle: 'SHOP BY DIVISION',
+        title: 'CURATED PILLARS',
+      },
+      lookbook_showcase: {
+        tag: 'ARCHITECTURAL EDITORIAL // 2026',
+        title: 'MONOLITH FIELD STUDY',
+        subtitle: 'Engineered for high-altitude brutalist topography and extreme precipitation endurance.',
+        buttonText: 'EXPLORE FULL LOOKBOOK',
+        imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1600&q=85',
+      },
+      testimonials: {
+        superTitle: 'VERIFIED DISPATCH CLIENTS',
+        title: 'TESTED IN EXTREMES',
+      },
+      newsletter: {
+        superTitle: 'EXCLUSIVE ACCESS',
+        title: 'JOIN THE RAYLUXX GUILD',
+        subtitle: 'Receive priority allocation notices 48 hours prior to public drops.',
+      },
+      custom_banner: {
+        superTitle: 'LIMITED ALLOCATION',
+        title: 'GLOBAL COLD-CLIMATE ARCHIVE',
+        subtitle: 'Bonded 3-layer seams rated for sub-zero wind chills.',
+        buttonText: 'DISCOVER ARCHIVE',
+        bgTheme: 'dark',
+      },
+    };
+
+    const newSec: PageSectionItem = {
+      id: newId,
+      type,
+      title: title || titlesMap[type] || 'New Section',
+      active: true,
+      settings: defaultSettingsMap[type] || {},
+    };
+
+    setPageSections((prev) => [...prev, newSec]);
+  };
+
+  const deleteSection = (id: string) => {
+    setPageSections((prev) => prev.filter((sec) => sec.id !== id));
+  };
 
   const updateHeroConfig = (config: Partial<HeroBannerConfig>) => {
     setHeroConfig((prev) => ({ ...prev, ...config }));
@@ -541,6 +765,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         tickerConfig,
         updateTickerConfig,
         resetTickerConfig,
+        pageSections,
+        updatePageSections,
+        resetPageSections,
+        reorderSections,
+        toggleSectionActive,
+        updateSectionSettings,
+        addSection,
+        deleteSection,
       }}
     >
       {children}
