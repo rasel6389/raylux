@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Order, Product, InventoryItem, HeroBannerConfig, AnnouncementConfig } from '../types/product';
+import {
+  Order,
+  Product,
+  InventoryItem,
+  HeroBannerConfig,
+  AnnouncementConfig,
+  EditorialSectionConfig,
+  MarqueeTickerConfig
+} from '../types/product';
 import { MOCK_ORDERS, MOCK_INVENTORY } from '../data/dashboard';
 import { PRODUCTS } from '../data/products';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
@@ -19,6 +27,14 @@ export const DEFAULT_HERO_CONFIG: HeroBannerConfig = {
   secondaryBtnText: 'VIEW 2026 LOOKBOOK',
   secondaryBtnAction: 'lookbook',
   secondaryBtnActive: true,
+  layoutStyle: 'cinematic-fullscreen',
+  heightMode: '90vh',
+  contentAlignment: 'left',
+  overlayDarkness: 40,
+  overlayGradient: true,
+  titleSize: 'monumental',
+  primaryBtnStyle: 'white',
+  secondaryBtnStyle: 'outline',
 };
 
 export const DEFAULT_ANNOUNCEMENT_CONFIG: AnnouncementConfig = {
@@ -26,6 +42,35 @@ export const DEFAULT_ANNOUNCEMENT_CONFIG: AnnouncementConfig = {
   text: 'Members: Complimentary Worldwide Dispatch on orders over $150 • 30-Day Risk-Free Returns.',
   discountCode: 'MEMBER20',
   linkText: 'Join or Sign In',
+};
+
+export const DEFAULT_EDITORIAL_CONFIG: EditorialSectionConfig = {
+  active: true,
+  superTitle: 'PHILOSOPHY OF PERFORMANCE',
+  title: 'DISCIPLINED FORM. ZERO COMPROMISE.',
+  description: 'Traditional headwear relies on decorative crests, fragile crowns, and cheap synthetics. RAYLUXX discards ornament in favor of architectural purity. Engineered for endurance athletes, architects, and urban commuters who demand relentless quality.',
+  imageUrl: 'https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=1200&q=80',
+  specBadgeTag: 'TEXTILE SPECIFICATION',
+  specBadgeTitle: 'CORDURA® 500D + GORE-TEX HYBRID',
+  specBadgeSub: '28,000MM HYDROSTATIC HEAD',
+  pillar1Title: 'STORM PROOF',
+  pillar1Desc: 'Seam-sealed tape blocks high-velocity precipitation.',
+  pillar2Title: 'AERODYNAMIC PROFILE',
+  pillar2Desc: 'Laser-cut ventilation prevents crown heat retention.',
+  pillar3Title: 'ZERO DECORATIVE RIVETS',
+  pillar3Desc: 'Stripped of non-functional hardware for ultralight feel.',
+};
+
+export const DEFAULT_TICKER_CONFIG: MarqueeTickerConfig = {
+  active: true,
+  items: [
+    'GORE-TEX 3L MEMBRANE',
+    'LASER-PERFORATED AERODYNAMIC VENTS',
+    '340 GSM HIGH-DENSITY HEAVY TWILL',
+    'CORDURA® 500D MIL-SPEC WEAVE',
+    'COMPLIMENTARY EXPRESS DISPATCH OVER $150',
+    'AUTHENTICATED SAME-DAY DISPATCH',
+  ],
 };
 
 interface StoreContextType {
@@ -47,6 +92,12 @@ interface StoreContextType {
   resetHeroConfig: () => void;
   announcementConfig: AnnouncementConfig;
   updateAnnouncementConfig: (config: Partial<AnnouncementConfig>) => void;
+  editorialConfig: EditorialSectionConfig;
+  updateEditorialConfig: (config: Partial<EditorialSectionConfig>) => void;
+  resetEditorialConfig: () => void;
+  tickerConfig: MarqueeTickerConfig;
+  updateTickerConfig: (config: Partial<MarqueeTickerConfig>) => void;
+  resetTickerConfig: () => void;
 }
 
 const ORDERS_KEY = 'raylux_orders_v2';
@@ -123,6 +174,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const HERO_CONFIG_KEY = 'raylux_hero_banner_config_v2';
   const ANNOUNCEMENT_CONFIG_KEY = 'raylux_announcement_config_v2';
+  const EDITORIAL_CONFIG_KEY = 'raylux_editorial_config_v2';
+  const TICKER_CONFIG_KEY = 'raylux_ticker_config_v2';
 
   const [heroConfig, setHeroConfig] = useState<HeroBannerConfig>(() => {
     try {
@@ -150,6 +203,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return DEFAULT_ANNOUNCEMENT_CONFIG;
   });
 
+  const [editorialConfig, setEditorialConfig] = useState<EditorialSectionConfig>(() => {
+    try {
+      const saved = localStorage.getItem(EDITORIAL_CONFIG_KEY);
+      if (saved) return { ...DEFAULT_EDITORIAL_CONFIG, ...JSON.parse(saved) };
+    } catch {
+      // ignore
+    }
+    return DEFAULT_EDITORIAL_CONFIG;
+  });
+
+  const [tickerConfig, setTickerConfig] = useState<MarqueeTickerConfig>(() => {
+    try {
+      const saved = localStorage.getItem(TICKER_CONFIG_KEY);
+      if (saved) return { ...DEFAULT_TICKER_CONFIG, ...JSON.parse(saved) };
+    } catch {
+      // ignore
+    }
+    return DEFAULT_TICKER_CONFIG;
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem(HERO_CONFIG_KEY, JSON.stringify(heroConfig));
@@ -166,6 +239,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [announcementConfig]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(EDITORIAL_CONFIG_KEY, JSON.stringify(editorialConfig));
+    } catch {
+      // ignore
+    }
+  }, [editorialConfig]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TICKER_CONFIG_KEY, JSON.stringify(tickerConfig));
+    } catch {
+      // ignore
+    }
+  }, [tickerConfig]);
+
   const updateHeroConfig = (config: Partial<HeroBannerConfig>) => {
     setHeroConfig((prev) => ({ ...prev, ...config }));
   };
@@ -176,6 +265,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateAnnouncementConfig = (config: Partial<AnnouncementConfig>) => {
     setAnnouncementConfig((prev) => ({ ...prev, ...config }));
+  };
+
+  const updateEditorialConfig = (config: Partial<EditorialSectionConfig>) => {
+    setEditorialConfig((prev) => ({ ...prev, ...config }));
+  };
+
+  const resetEditorialConfig = () => {
+    setEditorialConfig(DEFAULT_EDITORIAL_CONFIG);
+  };
+
+  const updateTickerConfig = (config: Partial<MarqueeTickerConfig>) => {
+    setTickerConfig((prev) => ({ ...prev, ...config }));
+  };
+
+  const resetTickerConfig = () => {
+    setTickerConfig(DEFAULT_TICKER_CONFIG);
   };
 
   const placeOrder = (orderData: Omit<Order, 'id' | 'orderNumber' | 'date'>): Order => {
@@ -430,6 +535,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         resetHeroConfig,
         announcementConfig,
         updateAnnouncementConfig,
+        editorialConfig,
+        updateEditorialConfig,
+        resetEditorialConfig,
+        tickerConfig,
+        updateTickerConfig,
+        resetTickerConfig,
       }}
     >
       {children}

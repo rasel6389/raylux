@@ -40,6 +40,14 @@ import {
   UserPlus,
   Phone,
   MapPin,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Layout,
+  Layers,
+  Type,
+  Image as ImageIcon,
+  Shield,
 } from 'lucide-react';
 import { useTickets } from '../context/TicketContext';
 import { useCurrency } from '../context/CurrencyContext';
@@ -67,6 +75,11 @@ const PRESET_HERO_IMAGES = [
   { label: 'GORE-TEX Mountain', url: 'https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=2400&q=85' },
   { label: 'Urban Dark Architecture', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=2400&q=85' },
   { label: 'Tokyo Monolith Night', url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Matte Stealth Cap', url: 'https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Aerospace Concrete', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Cyberpunk Rain Night', url: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Laboratory White Room', url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=2400&q=85' },
+  { label: 'Futuristic Runway', url: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=2400&q=85' },
 ];
 
 export const AdminPage: React.FC = () => {
@@ -85,6 +98,12 @@ export const AdminPage: React.FC = () => {
     resetHeroConfig,
     announcementConfig,
     updateAnnouncementConfig,
+    editorialConfig,
+    updateEditorialConfig,
+    resetEditorialConfig,
+    tickerConfig,
+    updateTickerConfig,
+    resetTickerConfig,
   } = useStore();
   const {
     registeredUsers,
@@ -123,9 +142,14 @@ export const AdminPage: React.FC = () => {
   const [selectedInspectOrder, setSelectedInspectOrder] = useState<Order | null>(null);
   const [inspectCustomer, setInspectCustomer] = useState<User | null>(null);
 
-  // Hero CMS Editing State
+  // WordPress-Style Visual Theme Customizer State
+  const [cmsSubTab, setCmsSubTab] = useState<'hero' | 'editorial' | 'announcement'>('hero');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [editHero, setEditHero] = useState(heroConfig);
   const [editAnnouncement, setEditAnnouncement] = useState(announcementConfig);
+  const [editEditorial, setEditEditorial] = useState(editorialConfig);
+  const [editTicker, setEditTicker] = useState(tickerConfig);
+  const [newTickerItem, setNewTickerItem] = useState('');
 
   useEffect(() => {
     setEditHero(heroConfig);
@@ -134,6 +158,14 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     setEditAnnouncement(announcementConfig);
   }, [announcementConfig]);
+
+  useEffect(() => {
+    setEditEditorial(editorialConfig);
+  }, [editorialConfig]);
+
+  useEffect(() => {
+    setEditTicker(tickerConfig);
+  }, [tickerConfig]);
 
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
@@ -456,17 +488,21 @@ export const AdminPage: React.FC = () => {
     setIsCustomerModalOpen(false);
   };
 
-  const handleSaveHeroBanner = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveHeroBanner = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     updateHeroConfig(editHero);
     updateAnnouncementConfig(editAnnouncement);
-    showNotice('Storefront Hero Banner and Announcement updated live!');
+    updateEditorialConfig(editEditorial);
+    updateTickerConfig(editTicker);
+    showNotice('Storefront Architecture & Hero CMS published live to storefront!');
   };
 
   const handleResetHeroBanner = () => {
-    if (confirm('Reset Storefront Hero Banner to factory defaults?')) {
+    if (confirm('Reset Storefront Hero Banner, Editorial section, and Ticker to factory defaults?')) {
       resetHeroConfig();
-      showNotice('Hero banner reset to defaults.');
+      resetEditorialConfig();
+      resetTickerConfig();
+      showNotice('Storefront architecture reset to factory defaults.');
     }
   };
 
@@ -1243,36 +1279,74 @@ export const AdminPage: React.FC = () => {
           )}
 
           {/* ==========================================
-              TAB: HERO & STOREFRONT CMS (NEW!)
+              TAB: HERO & STOREFRONT CMS (WORDPRESS-STYLE VISUAL BUILDER)
              ========================================== */}
           {activeTab === 'hero_cms' && (
             <div className="space-y-8 animate-fadeIn">
               
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-200">
+              {/* Header with Sub-tabs and Device Switcher */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-neutral-200">
                 <div>
                   <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase block mb-1">
-                    STOREFRONT ARCHITECTURE CMS
+                    WORDPRESS-STYLE VISUAL BUILDER // STOREFRONT CMS
                   </span>
                   <h1 className="font-nike text-3xl font-black text-black tracking-tight uppercase">
-                    Hero Banner & Announcement CMS
+                    Storefront Customizer & Hero CMS
                   </h1>
                   <p className="text-xs text-neutral-500 mt-0.5">
-                    Modify headlines, imagery, CTA buttons, and top promotional banner in real-time.
+                    Live visual theme customizer for Hero Banner, Brand Philosophy, Marquee Ticker, and Promotional Alerts.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Device Viewport Preview Switcher */}
+                  <div className="flex items-center bg-neutral-100 p-1 rounded-full border border-neutral-200">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice('desktop')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        previewDevice === 'desktop' ? 'bg-white text-black shadow-xs' : 'text-neutral-500 hover:text-black'
+                      }`}
+                      title="Desktop View (100%)"
+                    >
+                      <Monitor size={14} />
+                      <span className="hidden sm:inline">Desktop</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice('tablet')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        previewDevice === 'tablet' ? 'bg-white text-black shadow-xs' : 'text-neutral-500 hover:text-black'
+                      }`}
+                      title="Tablet View (768px)"
+                    >
+                      <Tablet size={14} />
+                      <span className="hidden sm:inline">Tablet</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice('mobile')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        previewDevice === 'mobile' ? 'bg-white text-black shadow-xs' : 'text-neutral-500 hover:text-black'
+                      }`}
+                      title="Mobile View (390px)"
+                    >
+                      <Smartphone size={14} />
+                      <span className="hidden sm:inline">Mobile</span>
+                    </button>
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleResetHeroBanner}
                     className="px-4 py-2 border border-neutral-300 hover:border-black rounded-full text-xs font-bold text-black flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <RotateCcw size={13} />
-                    <span>Reset Defaults</span>
+                    <span>Reset</span>
                   </button>
                   <button
                     id="save-hero-cms-btn"
-                    onClick={handleSaveHeroBanner}
+                    onClick={() => handleSaveHeroBanner()}
                     className="px-6 py-2 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
                     <Check size={14} />
@@ -1281,248 +1355,735 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* LIVE MINI HERO PREVIEW CARD */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-black" />
-                  <span>Real-Time Storefront Hero Preview</span>
-                </span>
-                <div className="relative w-full h-80 sm:h-96 rounded-3xl overflow-hidden bg-black text-white p-6 sm:p-10 flex flex-col justify-between shadow-2xl border border-neutral-800 select-none">
-                  {/* Background Image */}
-                  <img
-                    src={editHero.imageUrl}
-                    alt="Preview"
-                    className="absolute inset-0 w-full h-full object-cover filter brightness-75 contrast-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+              {/* Sub-Navigation Tabs */}
+              <div className="flex border-b border-neutral-200 gap-2 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setCmsSubTab('hero')}
+                  className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    cmsSubTab === 'hero'
+                      ? 'border-black text-black'
+                      : 'border-transparent text-neutral-400 hover:text-black'
+                  }`}
+                >
+                  <Layout size={15} />
+                  <span>1. Hero Banner Builder</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCmsSubTab('editorial')}
+                  className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    cmsSubTab === 'editorial'
+                      ? 'border-black text-black'
+                      : 'border-transparent text-neutral-400 hover:text-black'
+                  }`}
+                >
+                  <Layers size={15} />
+                  <span>2. Editorial Philosophy & Pillars</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCmsSubTab('announcement')}
+                  className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    cmsSubTab === 'announcement'
+                      ? 'border-black text-black'
+                      : 'border-transparent text-neutral-400 hover:text-black'
+                  }`}
+                >
+                  <Sparkles size={15} />
+                  <span>3. Announcement & Marquee Ticker</span>
+                </button>
+              </div>
 
-                  {/* Top Bar Preview */}
-                  <div className="relative z-10 flex justify-between items-start">
-                    {editHero.badgeActive ? (
-                      <span className="px-3 py-1 bg-black/70 backdrop-blur-xs border border-white/20 text-white rounded-full text-[10px] font-bold uppercase tracking-wider">
-                        ● {editHero.badgeText}
-                      </span>
-                    ) : <div />}
-                    <div className="text-right text-[10px] text-white/75 font-mono hidden sm:block">
-                      {editHero.topRightCaptionLine1}
-                      <br />
-                      <strong className="text-white">{editHero.topRightCaptionLine2}</strong>
-                    </div>
-                  </div>
+              {/* LIVE INTERACTIVE WYSIWYG PREVIEW CONTAINER */}
+              <div className="space-y-2 bg-neutral-100 p-4 sm:p-6 rounded-3xl border border-neutral-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-black animate-pulse" />
+                    <span>Live Interactive Preview ({previewDevice.toUpperCase()} VIEW)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-neutral-400">
+                    {previewDevice === 'mobile' ? '390px' : previewDevice === 'tablet' ? '768px' : '100% Fluid'}
+                  </span>
+                </div>
 
-                  {/* Bottom Typography & CTAs */}
-                  <div className="relative z-10 space-y-3">
-                    <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest block">
-                      {editHero.superTitle}
-                    </span>
-                    <h2 className="font-nike text-4xl sm:text-6xl font-black uppercase tracking-tighter leading-none text-white">
-                      {editHero.mainTitle}
-                    </h2>
-                    <p className="text-xs text-white/80 max-w-xl line-clamp-2">
-                      {editHero.description}
-                    </p>
-                    <div className="flex gap-2.5 pt-2">
-                      <span className="px-5 py-2 bg-white text-black font-bold text-xs uppercase rounded-full tracking-wider">
-                        {editHero.primaryBtnText}
-                      </span>
-                      {editHero.secondaryBtnActive && (
-                        <span className="px-5 py-2 bg-transparent border border-white text-white font-bold text-xs uppercase rounded-full tracking-wider">
-                          {editHero.secondaryBtnText}
+                {/* Device Frame Wrapper */}
+                <div className={`transition-all duration-300 mx-auto ${
+                  previewDevice === 'mobile' ? 'max-w-sm shadow-2xl rounded-[40px] border-8 border-neutral-900 overflow-hidden' : previewDevice === 'tablet' ? 'max-w-2xl shadow-xl rounded-3xl border-4 border-neutral-800 overflow-hidden' : 'w-full shadow-lg rounded-3xl overflow-hidden'
+                }`}>
+                  
+                  {/* Hero Live Preview Render */}
+                  <div className={`relative w-full ${previewDevice === 'mobile' ? 'h-[500px]' : previewDevice === 'tablet' ? 'h-[440px]' : 'h-96 sm:h-[460px]'} bg-black text-white p-6 sm:p-10 flex flex-col justify-between overflow-hidden select-none`}>
+                    
+                    {/* Background Image with Dynamic Overlay */}
+                    {editHero.layoutStyle !== 'split-editorial' && (
+                      <div className="absolute inset-0">
+                        <img
+                          src={editHero.imageUrl || PRESET_HERO_IMAGES[0].url}
+                          alt="Live Preview"
+                          className="w-full h-full object-cover filter contrast-110"
+                        />
+                        {/* Dynamic Dark Tint Overlay Slider */}
+                        <div
+                          className="absolute inset-0 transition-opacity duration-300"
+                          style={{ backgroundColor: `rgba(0, 0, 0, ${(editHero.overlayDarkness ?? 40) / 100})` }}
+                        />
+                        {editHero.overlayGradient !== false && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Top Floating Badge & Header Caption */}
+                    <div className={`relative z-10 flex ${editHero.contentAlignment === 'center' || editHero.layoutStyle === 'center-impact' ? 'justify-center' : 'justify-between'} items-start`}>
+                      {editHero.badgeActive ? (
+                        <span className="px-3 py-1 bg-black/70 backdrop-blur-xs border border-white/20 text-white rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                          <span>{editHero.badgeText}</span>
                         </span>
+                      ) : <div />}
+                      {editHero.contentAlignment !== 'center' && editHero.layoutStyle !== 'center-impact' && (editHero.topRightCaptionLine1 || editHero.topRightCaptionLine2) && (
+                        <div className="text-right text-[10px] text-white/75 font-mono hidden sm:block">
+                          {editHero.topRightCaptionLine1}
+                          <br />
+                          <strong className="text-white">{editHero.topRightCaptionLine2}</strong>
+                        </div>
                       )}
                     </div>
+
+                    {/* Split Layout Preview Mode */}
+                    {editHero.layoutStyle === 'split-editorial' ? (
+                      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-6 items-center flex-1 my-auto">
+                        <div className="space-y-3">
+                          {editHero.superTitle && (
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">
+                              {editHero.superTitle}
+                            </span>
+                          )}
+                          <h2 className="font-nike text-3xl sm:text-5xl font-black uppercase tracking-tighter leading-none text-white">
+                            {editHero.mainTitle}
+                          </h2>
+                          <p className="text-xs text-neutral-300 line-clamp-2">
+                            {editHero.description}
+                          </p>
+                          <div className="flex gap-2 pt-1">
+                            <span className={`px-4 py-2 text-[11px] font-bold uppercase rounded-full tracking-wider ${
+                              editHero.primaryBtnStyle === 'black' ? 'bg-black text-white border border-white/30' : editHero.primaryBtnStyle === 'outline' ? 'bg-transparent text-white border border-white' : 'bg-white text-black'
+                            }`}>
+                              {editHero.primaryBtnText}
+                            </span>
+                            {editHero.secondaryBtnActive && (
+                              <span className="px-4 py-2 bg-transparent border border-white text-white text-[11px] font-bold uppercase rounded-full tracking-wider">
+                                {editHero.secondaryBtnText}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="relative aspect-video sm:aspect-square rounded-2xl overflow-hidden border border-white/20 shadow-xl">
+                          <img
+                            src={editHero.imageUrl || PRESET_HERO_IMAGES[0].url}
+                            alt="Split Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      /* Monumental / Center Preview Mode */
+                      <div className={`relative z-10 space-y-3 ${
+                        editHero.contentAlignment === 'center' || editHero.layoutStyle === 'center-impact' ? 'text-center mx-auto' : editHero.contentAlignment === 'right' ? 'text-right' : 'text-left'
+                      }`}>
+                        {editHero.superTitle && (
+                          <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest block">
+                            {editHero.superTitle}
+                          </span>
+                        )}
+                        <h2 className={`font-nike ${
+                          editHero.titleSize === 'standard' ? 'text-3xl sm:text-5xl' : editHero.titleSize === 'massive' ? 'text-4xl sm:text-7xl' : 'text-5xl sm:text-7xl lg:text-8xl'
+                        } font-black uppercase tracking-tighter leading-none text-white`}>
+                          {editHero.mainTitle}
+                        </h2>
+                        <p className={`text-xs text-white/85 line-clamp-2 ${editHero.contentAlignment === 'center' || editHero.layoutStyle === 'center-impact' ? 'mx-auto max-w-lg' : 'max-w-xl'}`}>
+                          {editHero.description}
+                        </p>
+                        <div className={`flex flex-wrap gap-2.5 pt-2 ${
+                          editHero.contentAlignment === 'center' || editHero.layoutStyle === 'center-impact' ? 'justify-center' : editHero.contentAlignment === 'right' ? 'justify-end' : 'justify-start'
+                        }`}>
+                          <span className={`px-5 py-2.5 text-xs font-bold uppercase rounded-full tracking-wider shadow-md ${
+                            editHero.primaryBtnStyle === 'black' ? 'bg-black text-white border border-white/40' : editHero.primaryBtnStyle === 'outline' ? 'bg-transparent text-white border-2 border-white' : 'bg-white text-black'
+                          }`}>
+                            {editHero.primaryBtnText}
+                          </span>
+                          {editHero.secondaryBtnActive && (
+                            <span className="px-5 py-2.5 bg-transparent border border-white text-white text-xs font-bold uppercase rounded-full tracking-wider">
+                              {editHero.secondaryBtnText}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               </div>
 
-              {/* EDIT FORM ACCORDION/GRID */}
-              <form onSubmit={handleSaveHeroBanner} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Panel 1: Hero Typography & Content */}
-                <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-4 shadow-xs">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-black border-b border-neutral-100 pb-3">
-                    Typography & Editorial Copy
-                  </h3>
+              {/* EDIT FORM PANELS ACCORDING TO SUB-TAB */}
+              {cmsSubTab === 'hero' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  
+                  {/* Left Column: Visual Layout, Geometry & Typography */}
+                  <div className="lg:col-span-6 space-y-6">
+                    
+                    {/* 1. Layout Style Preset Picker */}
+                    <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                          <Layout size={15} />
+                          <span>Hero Layout Architecture</span>
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-mono">4 Modes</span>
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                      Main Display Headline
-                    </label>
-                    <input
-                      id="hero-main-title-input"
-                      type="text"
-                      required
-                      value={editHero.mainTitle}
-                      onChange={(e) => setEditHero({ ...editHero, mainTitle: e.target.value.toUpperCase() })}
-                      placeholder="e.g. ENGINEERED TO LEAD"
-                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black font-nike uppercase font-black tracking-tight focus:bg-white focus:outline-none focus:border-black"
-                    />
-                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { id: 'cinematic-fullscreen', name: 'Cinematic Full', desc: 'Monumental full-bleed hero with bottom directive' },
+                          { id: 'split-editorial', name: 'Split Editorial', desc: '50/50 split with image card and side manifesto' },
+                          { id: 'center-impact', name: 'Center Impact', desc: 'Bold centered headlines and balanced actions' },
+                          { id: 'minimal-brutalist', name: 'Minimal Brutalist', desc: 'Architectural border frame with high-contrast copy' },
+                        ].map((layout) => (
+                          <button
+                            key={layout.id}
+                            type="button"
+                            onClick={() => setEditHero({ ...editHero, layoutStyle: layout.id as any })}
+                            className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                              (editHero.layoutStyle || 'cinematic-fullscreen') === layout.id
+                                ? 'border-black bg-neutral-900 text-white shadow-md'
+                                : 'border-neutral-200 bg-neutral-50 text-neutral-700 hover:border-neutral-400 hover:bg-white'
+                            }`}
+                          >
+                            <span className="text-xs font-bold uppercase block mb-1">{layout.name}</span>
+                            <span className="text-[10px] opacity-75 leading-tight block">{layout.desc}</span>
+                          </button>
+                        ))}
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                      Super-Title (Lab Category Tag)
-                    </label>
-                    <input
-                      type="text"
-                      value={editHero.superTitle}
-                      onChange={(e) => setEditHero({ ...editHero, superTitle: e.target.value.toUpperCase() })}
-                      placeholder="e.g. RAYLUXX TECHNICAL HEADWEAR LAB"
-                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black uppercase font-bold tracking-widest focus:bg-white focus:outline-none focus:border-black"
-                    />
-                  </div>
+                      {/* Canvas Controls: Height & Alignment */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                            Height Mode
+                          </label>
+                          <select
+                            value={editHero.heightMode || '90vh'}
+                            onChange={(e) => setEditHero({ ...editHero, heightMode: e.target.value as any })}
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
+                          >
+                            <option value="100vh">100vh (Full Screen)</option>
+                            <option value="90vh">90vh (Standard Studio)</option>
+                            <option value="80vh">80vh (Compact Header)</option>
+                          </select>
+                        </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                      Manifesto / Sub-Description
-                    </label>
-                    <textarea
-                      rows={3}
-                      required
-                      value={editHero.description}
-                      onChange={(e) => setEditHero({ ...editHero, description: e.target.value })}
-                      placeholder="Series 01 Architectural Headwear. Bonded waterproof seams..."
-                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-neutral-900 focus:bg-white focus:outline-none focus:border-black leading-relaxed"
-                    />
-                  </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                            Text Alignment
+                          </label>
+                          <select
+                            value={editHero.contentAlignment || 'left'}
+                            onChange={(e) => setEditHero({ ...editHero, contentAlignment: e.target.value as any })}
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
+                          >
+                            <option value="left">Left Aligned</option>
+                            <option value="center">Centered</option>
+                            <option value="right">Right Aligned</option>
+                          </select>
+                        </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs font-bold uppercase tracking-wider text-neutral-600">
-                          Floating Badge
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                            Title Scale
+                          </label>
+                          <select
+                            value={editHero.titleSize || 'monumental'}
+                            onChange={(e) => setEditHero({ ...editHero, titleSize: e.target.value as any })}
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
+                          >
+                            <option value="monumental">Monumental (11rem)</option>
+                            <option value="massive">Massive (9rem)</option>
+                            <option value="standard">Standard (7rem)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* 2. Typography & Editorial Copy */}
+                    <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-black border-b border-neutral-100 pb-3 flex items-center gap-2">
+                        <Type size={15} />
+                        <span>Display Typography & Narrative</span>
+                      </h3>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                          Main Display Headline
                         </label>
                         <input
+                          id="hero-main-title-input"
+                          type="text"
+                          required
+                          value={editHero.mainTitle}
+                          onChange={(e) => setEditHero({ ...editHero, mainTitle: e.target.value.toUpperCase() })}
+                          placeholder="e.g. ENGINEERED TO LEAD"
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black font-nike uppercase font-black tracking-tight focus:bg-white focus:outline-none focus:border-black"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                          Super-Title (Lab Category Tag)
+                        </label>
+                        <input
+                          type="text"
+                          value={editHero.superTitle}
+                          onChange={(e) => setEditHero({ ...editHero, superTitle: e.target.value.toUpperCase() })}
+                          placeholder="e.g. RAYLUXX TECHNICAL HEADWEAR LAB"
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black uppercase font-bold tracking-widest focus:bg-white focus:outline-none focus:border-black"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                          Sub-Manifesto / Narrative Description
+                        </label>
+                        <textarea
+                          rows={3}
+                          required
+                          value={editHero.description}
+                          onChange={(e) => setEditHero({ ...editHero, description: e.target.value })}
+                          placeholder="Series 01 Architectural Headwear. Bonded waterproof seams..."
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-neutral-900 focus:bg-white focus:outline-none focus:border-black leading-relaxed"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+                              Floating Badge
+                            </label>
+                            <input
+                              type="checkbox"
+                              checked={editHero.badgeActive}
+                              onChange={(e) => setEditHero({ ...editHero, badgeActive: e.target.checked })}
+                              className="rounded cursor-pointer"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={editHero.badgeText}
+                            onChange={(e) => setEditHero({ ...editHero, badgeText: e.target.value.toUpperCase() })}
+                            placeholder="e.g. NEW DROP // SUMMER 2026"
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black font-bold uppercase focus:bg-white focus:outline-none focus:border-black"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                            Top Right Caption (Line 1 & 2)
+                          </label>
+                          <input
+                            type="text"
+                            value={editHero.topRightCaptionLine1}
+                            onChange={(e) => setEditHero({ ...editHero, topRightCaptionLine1: e.target.value.toUpperCase() })}
+                            placeholder="Line 1"
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-black uppercase mb-1.5 focus:outline-none focus:border-black"
+                          />
+                          <input
+                            type="text"
+                            value={editHero.topRightCaptionLine2}
+                            onChange={(e) => setEditHero({ ...editHero, topRightCaptionLine2: e.target.value.toUpperCase() })}
+                            placeholder="Line 2"
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-black uppercase font-bold focus:outline-none focus:border-black"
+                          />
+                        </div>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: Media, Dark Tint Slider, and Action Buttons */}
+                  <div className="lg:col-span-6 space-y-6">
+                    
+                    {/* Media Gallery & Darkness Slider */}
+                    <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-5 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                          <ImageIcon size={15} />
+                          <span>Background Media & Overlay Tint</span>
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-mono">10 Presets</span>
+                      </div>
+
+                      {/* Dark Tint Slider (WordPress Elementor style) */}
+                      <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className="uppercase text-neutral-700">Dark Tint Overlay:</span>
+                          <span className="px-2 py-0.5 bg-black text-white rounded-md font-mono text-[11px]">
+                            {editHero.overlayDarkness ?? 40}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="90"
+                          step="5"
+                          value={editHero.overlayDarkness ?? 40}
+                          onChange={(e) => setEditHero({ ...editHero, overlayDarkness: parseInt(e.target.value, 10) })}
+                          className="w-full cursor-pointer accent-black"
+                        />
+                        <div className="flex justify-between text-[10px] text-neutral-400 font-medium">
+                          <span>0% (Bright / Transparent)</span>
+                          <span>40% (Balanced)</span>
+                          <span>90% (Deep Contrast)</span>
+                        </div>
+                      </div>
+
+                      {/* 10 Preset Photography Selector */}
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600">
+                          Curated Photography Library (1-Click Select)
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                          {PRESET_HERO_IMAGES.map((img) => (
+                            <button
+                              key={img.label}
+                              type="button"
+                              onClick={() => setEditHero({ ...editHero, imageUrl: img.url })}
+                              className={`aspect-[4/3] rounded-xl overflow-hidden border-2 relative group cursor-pointer transition-all ${
+                                editHero.imageUrl === img.url ? 'border-black ring-2 ring-black scale-102' : 'border-neutral-200 opacity-65 hover:opacity-100'
+                              }`}
+                            >
+                              <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                              <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-[9px] text-white font-bold text-center p-1 leading-tight">
+                                {img.label}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Custom Image URL */}
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                          Or Paste Custom Photography URL
+                        </label>
+                        <input
+                          type="url"
+                          placeholder="https://images.unsplash.com/..."
+                          value={editHero.imageUrl}
+                          onChange={(e) => setEditHero({ ...editHero, imageUrl: e.target.value })}
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-black focus:bg-white focus:outline-none focus:border-black"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Button Directives & Styling */}
+                    <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-black border-b border-neutral-100 pb-3 flex items-center gap-2">
+                        <Sliders size={15} />
+                        <span>Action Directives & Buttons</span>
+                      </h3>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Primary Button */}
+                        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2.5">
+                          <span className="text-xs font-bold uppercase tracking-wider text-black block">Primary Button</span>
+                          <input
+                            type="text"
+                            value={editHero.primaryBtnText}
+                            onChange={(e) => setEditHero({ ...editHero, primaryBtnText: e.target.value.toUpperCase() })}
+                            placeholder="e.g. SHOP THE COLLECTION"
+                            className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-2 text-xs text-black font-bold uppercase focus:outline-none focus:border-black"
+                          />
+                          <select
+                            value={editHero.primaryBtnAction}
+                            onChange={(e) => setEditHero({ ...editHero, primaryBtnAction: e.target.value as any })}
+                            className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
+                          >
+                            <option value="shop">Destination: Storefront Catalog</option>
+                            <option value="lookbook">Destination: 2026 Lookbook</option>
+                          </select>
+                          <select
+                            value={editHero.primaryBtnStyle || 'white'}
+                            onChange={(e) => setEditHero({ ...editHero, primaryBtnStyle: e.target.value as any })}
+                            className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
+                          >
+                            <option value="white">Style: Solid White Pill</option>
+                            <option value="black">Style: Solid Black Pill</option>
+                            <option value="outline">Style: Outline Border</option>
+                          </select>
+                        </div>
+
+                        {/* Secondary Button */}
+                        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-black">Secondary Button</span>
+                            <input
+                              type="checkbox"
+                              checked={editHero.secondaryBtnActive}
+                              onChange={(e) => setEditHero({ ...editHero, secondaryBtnActive: e.target.checked })}
+                              className="rounded cursor-pointer"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={editHero.secondaryBtnText}
+                            onChange={(e) => setEditHero({ ...editHero, secondaryBtnText: e.target.value.toUpperCase() })}
+                            placeholder="e.g. VIEW 2026 LOOKBOOK"
+                            className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-2 text-xs text-black font-bold uppercase focus:outline-none focus:border-black"
+                          />
+                          <select
+                            value={editHero.secondaryBtnAction}
+                            onChange={(e) => setEditHero({ ...editHero, secondaryBtnAction: e.target.value as any })}
+                            className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
+                          >
+                            <option value="lookbook">Destination: 2026 Lookbook</option>
+                            <option value="shop">Destination: Storefront Catalog</option>
+                          </select>
+                          <select
+                            value={editHero.secondaryBtnStyle || 'outline'}
+                            onChange={(e) => setEditHero({ ...editHero, secondaryBtnStyle: e.target.value as any })}
+                            className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
+                          >
+                            <option value="outline">Style: White Outline</option>
+                            <option value="ghost">Style: Translucent Ghost</option>
+                            <option value="glass">Style: Dark Frosted Glass</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSaveHeroBanner()}
+                        className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-xs uppercase tracking-wider transition-colors shadow-lg cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Check size={14} />
+                        <span>Publish Hero Banner to Storefront</span>
+                      </button>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+              {/* SUB-TAB 2: EDITORIAL PHILOSOPHY & PILLARS CMS */}
+              {cmsSubTab === 'editorial' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  
+                  {/* Left Column: Headlines & Story */}
+                  <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                        <Layers size={15} />
+                        <span>Section 4: Philosophy Narrative</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] font-bold uppercase text-neutral-500">Show Section</label>
+                        <input
                           type="checkbox"
-                          checked={editHero.badgeActive}
-                          onChange={(e) => setEditHero({ ...editHero, badgeActive: e.target.checked })}
+                          checked={editEditorial.active !== false}
+                          onChange={(e) => setEditEditorial({ ...editEditorial, active: e.target.checked })}
                           className="rounded cursor-pointer"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                        Super Title (Category Header)
+                      </label>
                       <input
                         type="text"
-                        value={editHero.badgeText}
-                        onChange={(e) => setEditHero({ ...editHero, badgeText: e.target.value.toUpperCase() })}
-                        placeholder="e.g. NEW DROP // SUMMER 2026"
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black font-bold uppercase focus:bg-white focus:outline-none focus:border-black"
+                        value={editEditorial.superTitle}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, superTitle: e.target.value.toUpperCase() })}
+                        placeholder="e.g. PHILOSOPHY OF PERFORMANCE"
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black font-bold uppercase focus:outline-none focus:border-black"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                        Top Right Caption (Line 1 & 2)
+                        Main Section Headline
                       </label>
                       <input
                         type="text"
-                        value={editHero.topRightCaptionLine1}
-                        onChange={(e) => setEditHero({ ...editHero, topRightCaptionLine1: e.target.value.toUpperCase() })}
-                        placeholder="Line 1"
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black uppercase mb-1.5 focus:outline-none focus:border-black"
-                      />
-                      <input
-                        type="text"
-                        value={editHero.topRightCaptionLine2}
-                        onChange={(e) => setEditHero({ ...editHero, topRightCaptionLine2: e.target.value.toUpperCase() })}
-                        placeholder="Line 2"
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black uppercase font-bold focus:outline-none focus:border-black"
+                        value={editEditorial.title}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, title: e.target.value.toUpperCase() })}
+                        placeholder="e.g. DISCIPLINED FORM. ZERO COMPROMISE."
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-black font-nike font-black uppercase tracking-tight focus:outline-none focus:border-black"
                       />
                     </div>
-                  </div>
-                </div>
 
-                {/* Panel 2: Background Media & Buttons */}
-                <div className="bg-white border border-neutral-200 p-6 rounded-2xl space-y-5 shadow-xs">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-black border-b border-neutral-100 pb-3">
-                    Hero Media & Action Directives
-                  </h3>
-
-                  {/* Preset Image Selector */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600">
-                      Editorial Photography Presets
-                    </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                      {PRESET_HERO_IMAGES.map((img) => (
-                        <button
-                          key={img.label}
-                          type="button"
-                          onClick={() => setEditHero({ ...editHero, imageUrl: img.url })}
-                          className={`aspect-video rounded-xl overflow-hidden border-2 relative group cursor-pointer ${
-                            editHero.imageUrl === img.url ? 'border-black ring-2 ring-black' : 'border-neutral-200 opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                          <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-[9px] text-white font-bold text-center p-1">
-                            {img.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
                     <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                        Manifesto Description Paragraph
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={editEditorial.description}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, description: e.target.value })}
+                        placeholder="Traditional headwear relies on decorative crests..."
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-neutral-900 focus:outline-none focus:border-black leading-relaxed"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                        Editorial Studio Image URL
+                      </label>
                       <input
                         type="url"
-                        placeholder="Or paste custom photography URL..."
-                        value={editHero.imageUrl}
-                        onChange={(e) => setEditHero({ ...editHero, imageUrl: e.target.value })}
-                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-black focus:bg-white focus:outline-none focus:border-black"
+                        value={editEditorial.imageUrl}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, imageUrl: e.target.value })}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black mb-2"
                       />
-                    </div>
-                  </div>
-
-                  {/* Buttons Configuration */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                    <div className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-black block">Primary Button (Solid)</span>
-                      <input
-                        type="text"
-                        value={editHero.primaryBtnText}
-                        onChange={(e) => setEditHero({ ...editHero, primaryBtnText: e.target.value.toUpperCase() })}
-                        placeholder="e.g. SHOP THE COLLECTION"
-                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-black font-bold uppercase focus:outline-none focus:border-black"
-                      />
-                      <select
-                        value={editHero.primaryBtnAction}
-                        onChange={(e) => setEditHero({ ...editHero, primaryBtnAction: e.target.value as 'shop' | 'lookbook' })}
-                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
-                      >
-                        <option value="shop">Destination: Storefront Catalog</option>
-                        <option value="lookbook">Destination: 2026 Lookbook</option>
-                      </select>
+                      <div className="flex gap-2">
+                        {[
+                          { label: 'Technical Construction', url: 'https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=1200&q=80' },
+                          { label: 'Matte Stealth Crown', url: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=1200&q=80' },
+                          { label: 'Architectural Macro', url: 'https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=1200&q=80' },
+                        ].map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setEditEditorial({ ...editEditorial, imageUrl: preset.url })}
+                            className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    <div className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-black">Secondary Button</span>
+                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-black block">Textile Spec Overlay Badge</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <input
-                          type="checkbox"
-                          checked={editHero.secondaryBtnActive}
-                          onChange={(e) => setEditHero({ ...editHero, secondaryBtnActive: e.target.checked })}
-                          className="rounded cursor-pointer"
+                          type="text"
+                          value={editEditorial.specBadgeTag}
+                          onChange={(e) => setEditEditorial({ ...editEditorial, specBadgeTag: e.target.value.toUpperCase() })}
+                          placeholder="Tag"
+                          className="bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs uppercase"
+                        />
+                        <input
+                          type="text"
+                          value={editEditorial.specBadgeTitle}
+                          onChange={(e) => setEditEditorial({ ...editEditorial, specBadgeTitle: e.target.value.toUpperCase() })}
+                          placeholder="Title"
+                          className="bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs font-bold uppercase"
+                        />
+                        <input
+                          type="text"
+                          value={editEditorial.specBadgeSub}
+                          onChange={(e) => setEditEditorial({ ...editEditorial, specBadgeSub: e.target.value.toUpperCase() })}
+                          placeholder="Sub-rating"
+                          className="bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs uppercase font-mono"
                         />
                       </div>
-                      <input
-                        type="text"
-                        value={editHero.secondaryBtnText}
-                        onChange={(e) => setEditHero({ ...editHero, secondaryBtnText: e.target.value.toUpperCase() })}
-                        placeholder="e.g. VIEW 2026 LOOKBOOK"
-                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-black font-bold uppercase focus:outline-none focus:border-black"
-                      />
-                      <select
-                        value={editHero.secondaryBtnAction}
-                        onChange={(e) => setEditHero({ ...editHero, secondaryBtnAction: e.target.value as 'shop' | 'lookbook' })}
-                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
-                      >
-                        <option value="lookbook">Destination: 2026 Lookbook</option>
-                        <option value="shop">Destination: Storefront Catalog</option>
-                      </select>
                     </div>
+
                   </div>
 
-                  {/* Announcement Bar Settings */}
-                  <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-black">
-                        Top Announcement Bar (With Dismiss 'X' Button)
+                  {/* Right Column: 3 Pillars */}
+                  <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-5 shadow-xs">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-black border-b border-neutral-100 pb-3 flex items-center gap-2">
+                      <Shield size={15} />
+                      <span>3 Architectural Pillars of Performance</span>
+                    </h3>
+
+                    {/* Pillar 1 */}
+                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 block">Pillar 1 (Shield / Storm Proof)</span>
+                      <input
+                        type="text"
+                        value={editEditorial.pillar1Title}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, pillar1Title: e.target.value.toUpperCase() })}
+                        placeholder="Title: e.g. STORM PROOF"
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-bold uppercase focus:outline-none focus:border-black"
+                      />
+                      <textarea
+                        rows={2}
+                        value={editEditorial.pillar1Desc}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, pillar1Desc: e.target.value })}
+                        placeholder="Description..."
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-black"
+                      />
+                    </div>
+
+                    {/* Pillar 2 */}
+                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 block">Pillar 2 (Compass / Cranial Fit)</span>
+                      <input
+                        type="text"
+                        value={editEditorial.pillar2Title}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, pillar2Title: e.target.value.toUpperCase() })}
+                        placeholder="Title: e.g. CRANIAL FIT"
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-bold uppercase focus:outline-none focus:border-black"
+                      />
+                      <textarea
+                        rows={2}
+                        value={editEditorial.pillar2Desc}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, pillar2Desc: e.target.value })}
+                        placeholder="Description..."
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-black"
+                      />
+                    </div>
+
+                    {/* Pillar 3 */}
+                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 block">Pillar 3 (Sparkles / Twill & Hardware)</span>
+                      <input
+                        type="text"
+                        value={editEditorial.pillar3Title}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, pillar3Title: e.target.value.toUpperCase() })}
+                        placeholder="Title: e.g. TACTILE TWILL"
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-bold uppercase focus:outline-none focus:border-black"
+                      />
+                      <textarea
+                        rows={2}
+                        value={editEditorial.pillar3Desc}
+                        onChange={(e) => setEditEditorial({ ...editEditorial, pillar3Desc: e.target.value })}
+                        placeholder="Description..."
+                        className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-black"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSaveHeroBanner()}
+                      className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-xs uppercase tracking-wider transition-colors shadow-lg cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Check size={14} />
+                      <span>Publish Editorial Story to Storefront</span>
+                    </button>
+                  </div>
+
+                </div>
+              )}
+
+              {/* SUB-TAB 3: ANNOUNCEMENT BAR & TICKER CMS */}
+              {cmsSubTab === 'announcement' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  
+                  {/* Announcement Bar */}
+                  <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                        <Sparkles size={15} />
+                        <span>Top Announcement Bar (With 'X' Dismiss)</span>
                       </span>
                       <input
                         type="checkbox"
@@ -1531,40 +2092,131 @@ export const AdminPage: React.FC = () => {
                         className="rounded cursor-pointer"
                       />
                     </div>
-                    <input
-                      type="text"
-                      value={editAnnouncement.text}
-                      onChange={(e) => setEditAnnouncement({ ...editAnnouncement, text: e.target.value })}
-                      placeholder="e.g. Members: Complimentary Worldwide Dispatch on orders over $150..."
-                      className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-2 text-xs text-black focus:outline-none focus:border-black"
-                    />
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={editAnnouncement.discountCode || ''}
-                        onChange={(e) => setEditAnnouncement({ ...editAnnouncement, discountCode: e.target.value.toUpperCase() })}
-                        placeholder="Voucher Code: MEMBER20"
-                        className="w-1/2 bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-mono uppercase focus:outline-none focus:border-black"
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                        Banner Promotional Message
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={editAnnouncement.text}
+                        onChange={(e) => setEditAnnouncement({ ...editAnnouncement, text: e.target.value })}
+                        placeholder="Members: Complimentary Worldwide Dispatch on orders over $150..."
+                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2 text-xs text-black focus:outline-none focus:border-black"
                       />
-                      <input
-                        type="text"
-                        value={editAnnouncement.linkText || ''}
-                        onChange={(e) => setEditAnnouncement({ ...editAnnouncement, linkText: e.target.value })}
-                        placeholder="Link Text: Join or Sign In"
-                        className="w-1/2 bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-black"
-                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-neutral-600 mb-1">
+                          Voucher Code (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={editAnnouncement.discountCode || ''}
+                          onChange={(e) => setEditAnnouncement({ ...editAnnouncement, discountCode: e.target.value.toUpperCase() })}
+                          placeholder="MEMBER20"
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-mono uppercase focus:outline-none focus:border-black"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-neutral-600 mb-1">
+                          CTA Action Text
+                        </label>
+                        <input
+                          type="text"
+                          value={editAnnouncement.linkText || ''}
+                          onChange={(e) => setEditAnnouncement({ ...editAnnouncement, linkText: e.target.value })}
+                          placeholder="Join or Sign In"
+                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-black"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 text-[11px] text-neutral-500">
+                      💡 <strong>Note:</strong> When visitors click the 'X' button on the announcement bar, it automatically stays closed in their session using sessionStorage.
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full py-3 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-xs uppercase tracking-wider transition-colors shadow-md cursor-pointer"
-                  >
-                    Publish All Changes to Storefront
-                  </button>
-                </div>
+                  {/* Marquee Ticker */}
+                  <div className="bg-white border border-neutral-200 p-6 rounded-3xl space-y-4 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+                        <Sparkles size={15} />
+                        <span>Homepage Scrolling Marquee Ticker</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={editTicker.active !== false}
+                        onChange={(e) => setEditTicker({ ...editTicker, active: e.target.checked })}
+                        className="rounded cursor-pointer"
+                      />
+                    </div>
 
-              </form>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-2">
+                        Active Ticker Tags ({editTicker.items.length})
+                      </label>
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {editTicker.items.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2 p-2 bg-neutral-50 rounded-xl border border-neutral-200">
+                            <span className="text-xs font-mono text-neutral-400 font-bold">{idx + 1}.</span>
+                            <span className="flex-1 text-xs font-bold text-black uppercase tracking-wider">{item}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditTicker({ ...editTicker, items: editTicker.items.filter((_, i) => i !== idx) })}
+                              className="p-1 hover:bg-neutral-200 rounded-md text-neutral-400 hover:text-rose-500 transition-colors cursor-pointer"
+                              title="Delete tag"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Add New Ticker Tag */}
+                    <div className="flex gap-2 pt-2 border-t border-neutral-100">
+                      <input
+                        type="text"
+                        value={newTickerItem}
+                        onChange={(e) => setNewTickerItem(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newTickerItem.trim()) {
+                            e.preventDefault();
+                            setEditTicker({ ...editTicker, items: [...editTicker.items, newTickerItem.trim()] });
+                            setNewTickerItem('');
+                          }
+                        }}
+                        placeholder="ADD PHRASE (e.g. JAPANESE MAGNETIC BUCKLE)"
+                        className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs uppercase font-bold focus:outline-none focus:border-black"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newTickerItem.trim()) {
+                            setEditTicker({ ...editTicker, items: [...editTicker.items, newTickerItem.trim()] });
+                            setNewTickerItem('');
+                          }
+                        }}
+                        className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold uppercase hover:bg-neutral-800 cursor-pointer"
+                      >
+                        + Add
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSaveHeroBanner()}
+                      className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-xs uppercase tracking-wider transition-colors shadow-lg cursor-pointer flex items-center justify-center gap-2 mt-4"
+                    >
+                      <Check size={14} />
+                      <span>Publish Announcement & Ticker Changes</span>
+                    </button>
+                  </div>
+
+                </div>
+              )}
 
             </div>
           )}

@@ -91,6 +91,37 @@ export interface HeroBannerConfig {
   secondaryBtnText: string;
   secondaryBtnAction: 'shop' | 'lookbook';
   secondaryBtnActive: boolean;
+  // WordPress-style Visual Builder & Layout Controls
+  layoutStyle?: 'cinematic-fullscreen' | 'split-editorial' | 'center-impact' | 'minimal-brutalist';
+  heightMode?: '100vh' | '90vh' | '80vh';
+  contentAlignment?: 'left' | 'center' | 'right';
+  overlayDarkness?: number; // 0 to 90 %
+  overlayGradient?: boolean;
+  titleSize?: 'standard' | 'massive' | 'monumental';
+  primaryBtnStyle?: 'white' | 'black' | 'outline';
+  secondaryBtnStyle?: 'outline' | 'ghost' | 'glass';
+}
+
+export interface EditorialSectionConfig {
+  active: boolean;
+  superTitle: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  specBadgeTag: string;
+  specBadgeTitle: string;
+  specBadgeSub: string;
+  pillar1Title: string;
+  pillar1Desc: string;
+  pillar2Title: string;
+  pillar2Desc: string;
+  pillar3Title: string;
+  pillar3Desc: string;
+}
+
+export interface MarqueeTickerConfig {
+  active: boolean;
+  items: string[];
 }
 
 export interface AnnouncementConfig {
