@@ -61,18 +61,11 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
 
-  // Automatically check if user should see the region & currency welcome modal
+  // Modal only opens when explicitly requested by user (e.g., clicking Region or currency selector)
   useEffect(() => {
+    // Keep dismissed flag persisted so it remains explicit
     try {
-      const isDismissed = localStorage.getItem(MODAL_DISMISSED_KEY);
-      const isCurrentAdmin = window.location.pathname.startsWith('/admin');
-      if (!isDismissed && !isCurrentAdmin) {
-        // Show after a brief delay for a polished welcome feeling
-        const timer = setTimeout(() => {
-          setIsCurrencyModalOpen(true);
-        }, 1200);
-        return () => clearTimeout(timer);
-      }
+      localStorage.setItem(MODAL_DISMISSED_KEY, 'true');
     } catch {
       // ignore
     }

@@ -13,7 +13,7 @@ interface AuthContextType {
   registeredUsers: User[];
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signup: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: (googleProfile?: { name: string; email: string; avatar?: string }) => Promise<void>;
+  loginWithGoogle: (googleProfile?: { name: string; email: string; avatar?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => void;
   addCustomer: (userData: Omit<User, 'id'>) => User;
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // ignore
     }
-    return DEFAULT_USERS[0];
+    return null;
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -275,16 +275,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
-  const loginWithGoogle = async (googleProfile?: { name: string; email: string; avatar?: string }) => {
-    // If a profile was explicitly passed (e.g. from demo picker)
+  const loginWithGoogle = async (
+    googleProfile?: { name: string; email: string; avatar?: string }
+  ): Promise<{ success: boolean; error?: string }> => {
+    // If a profile was explicitly passed (e.g. from picker or Supabase/OAuth callback)
     if (googleProfile) {
       const email = googleProfile.email;
       const name = googleProfile.name;
-      const avatar = googleProfile.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+      const avatar =
+        googleProfile.avatar ||
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       const existing = registeredUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
       if (existing) {
-        const updated = { ...existing, avatar: avatar || existing.avatar };
+        const updated = { ...existing, avatar: avatar || existing.avatar, name: name || existing.name };
         setCurrentUser(updated);
         setRegisteredUsers((prev) => prev.map((u) => (u.id === existing.id ? updated : u)));
       } else {
@@ -305,18 +309,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(newUser);
       }
       closeAuthModal();
-      return;
+      return { success: true };
     }
 
     // Otherwise, trigger real Firebase Google OAuth popup
     try {
       const fbUser = await loginWithFirebaseGoogle();
-      if (fbUser) {
+      if (fbUser && fbUser.email) {
         closeAuthModal();
+        return { success: true };
       }
+      return { success: false, error: 'Google sign in did not return an account.' };
     } catch (err: any) {
-      console.warn('Firebase Google Auth notice:', err.message || err);
-      // If popup closed or blocked, we gracefully do not crash
+      console.warn('Firebase Google Auth note:', err.message || err);
+      return {
+        success: false,
+        error: err.code === 'auth/popup-closed-by-user'
+          ? 'Sign in popup was closed. Please try again.'
+          : err.code === 'auth/unauthorized-domain'
+          ? 'Domain not authorized for Firebase popup yet.'
+          : err.message || 'Unable to connect to Google OAuth.',
+      };
     }
   };
 

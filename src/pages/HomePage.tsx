@@ -248,8 +248,8 @@ export const HomePage: React.FC = () => {
     const gridProducts = products.filter((p) => p.newArrival).slice(0, count);
 
     return (
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-6 border-b border-neutral-200 gap-4">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-neutral-200 gap-4">
           <div className="space-y-1">
             <span className="font-sans text-xs font-bold text-neutral-500 uppercase tracking-wider block">
               {superTitle}
@@ -306,15 +306,15 @@ export const HomePage: React.FC = () => {
         </div>
 
         {/* Right Column: Narrative */}
-        <div className="lg:col-span-6 p-8 sm:p-14 lg:p-20 space-y-8">
-          <div className="space-y-4">
+        <div className="lg:col-span-6 p-6 sm:p-10 lg:p-14 space-y-6">
+          <div className="space-y-3">
             <span className="font-sans text-xs font-bold uppercase text-neutral-500 tracking-wider block">
               {editorialConfig?.superTitle || 'PHILOSOPHY OF PERFORMANCE'}
             </span>
-            <h2 className="font-nike text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-black leading-none">
+            <h2 className="font-nike text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-black leading-none">
               {editorialConfig?.title || 'DISCIPLINED FORM. ZERO COMPROMISE.'}
             </h2>
-            <p className="font-sans text-base text-neutral-700 leading-relaxed">
+            <p className="font-sans text-sm sm:text-base text-neutral-700 leading-relaxed">
               {editorialConfig?.description || 'Traditional headwear relies on decorative crests, fragile crowns, and cheap synthetics. RAYLUXX discards ornament in favor of architectural purity. Engineered for endurance athletes, architects, and urban commuters who demand relentless quality.'}
             </p>
           </div>
@@ -352,7 +352,7 @@ export const HomePage: React.FC = () => {
 
           <button
             onClick={() => goToProduct(HERO_PRODUCT.id)}
-            className="px-8 py-4 bg-black text-white font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-800 transition-colors inline-flex items-center gap-2 cursor-pointer"
+            className="px-8 py-3.5 bg-black text-white font-sans text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-800 transition-colors inline-flex items-center gap-2 cursor-pointer shadow-md"
           >
             <span>EXPLORE MONOLITH 01</span>
             <ArrowRight size={15} />
@@ -364,8 +364,8 @@ export const HomePage: React.FC = () => {
 
   // 5. CURATED PILLARS SPOTLIGHT
   const renderSpotlightSection = (settings?: Record<string, any>) => (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-      <div className="mb-12 pb-6 border-b border-neutral-200">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+      <div className="mb-8 pb-4 border-b border-neutral-200">
         <span className="font-sans text-xs font-bold text-neutral-500 uppercase tracking-wider block">
           {settings?.superTitle || 'SHOP BY DIVISION'}
         </span>
@@ -443,7 +443,7 @@ export const HomePage: React.FC = () => {
 
   // 6. LOOKBOOK SHOWCASE BANNER
   const renderLookbookSection = (settings?: Record<string, any>) => (
-    <section className="relative w-full min-h-[70vh] flex items-center bg-black text-white overflow-hidden my-12">
+    <section className="relative w-full min-h-[48vh] sm:min-h-[55vh] flex items-center bg-black text-white overflow-hidden my-6 sm:my-8">
       <div className="absolute inset-0 z-0">
         <img
           src={settings?.imageUrl || "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1600&q=85"}
@@ -453,24 +453,24 @@ export const HomePage: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="max-w-2xl space-y-6">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div className="max-w-2xl space-y-5">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white">
             <Camera size={14} />
             <span>{settings?.tag || 'ARCHITECTURAL EDITORIAL // 2026'}</span>
           </div>
-          <h2 className="font-nike text-5xl sm:text-7xl font-black uppercase tracking-tight text-white leading-none">
+          <h2 className="font-nike text-4xl sm:text-6xl font-black uppercase tracking-tight text-white leading-none">
             {settings?.title || 'MONOLITH FIELD STUDY'}
           </h2>
-          <p className="font-sans text-base sm:text-lg text-neutral-300 leading-relaxed font-normal">
+          <p className="font-sans text-sm sm:text-base text-neutral-300 leading-relaxed font-normal">
             {settings?.subtitle || 'Engineered for high-altitude brutalist topography and extreme precipitation endurance. Tested through 12 alpine storm fronts.'}
           </p>
           <button
             onClick={() => goToLookbook()}
-            className="py-4 px-8 bg-white text-black font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xl"
+            className="py-3.5 px-8 bg-white text-black font-sans text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-all inline-flex items-center gap-2 cursor-pointer shadow-xl"
           >
             <span>{settings?.buttonText || 'EXPLORE FULL LOOKBOOK'}</span>
-            <ArrowRight size={16} />
+            <ArrowRight size={15} />
           </button>
         </div>
       </div>
@@ -479,17 +479,17 @@ export const HomePage: React.FC = () => {
 
   // 7. CLIENT TESTIMONIALS & PRESS
   const renderTestimonialsSection = (settings?: Record<string, any>) => (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24 border-t border-neutral-200">
-      <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 border-t border-neutral-200">
+      <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
         <span className="font-sans text-xs font-bold text-neutral-500 uppercase tracking-widest block">
           {settings?.superTitle || 'VERIFIED DISPATCH CLIENTS'}
         </span>
-        <h2 className="font-nike text-4xl sm:text-5xl font-black uppercase text-black tracking-tight">
+        <h2 className="font-nike text-3xl sm:text-5xl font-black uppercase text-black tracking-tight">
           {settings?.title || 'TESTED IN EXTREMES'}
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           {
             quote: 'The GORE-TEX 3L runner is unmatched. I wore it during an ultra in Snowdonia with relentless downpours; zero leakage and perfect crown breathability.',
@@ -510,18 +510,18 @@ export const HomePage: React.FC = () => {
             stars: 5,
           },
         ].map((item, idx) => (
-          <div key={idx} className="p-8 bg-neutral-50 border border-neutral-200 rounded-2xl flex flex-col justify-between space-y-6">
-            <div className="space-y-4">
+          <div key={idx} className="p-6 sm:p-7 bg-neutral-50 border border-neutral-200 rounded-2xl flex flex-col justify-between space-y-5">
+            <div className="space-y-3">
               <div className="flex gap-1 text-amber-500">
                 {Array.from({ length: item.stars }).map((_, i) => (
-                  <Star key={i} size={16} fill="currentColor" />
+                  <Star key={i} size={15} fill="currentColor" />
                 ))}
               </div>
-              <p className="font-sans text-sm text-neutral-700 leading-relaxed italic">
+              <p className="font-sans text-xs sm:text-sm text-neutral-700 leading-relaxed italic">
                 "{item.quote}"
               </p>
             </div>
-            <div className="pt-4 border-t border-neutral-200">
+            <div className="pt-3 border-t border-neutral-200">
               <p className="font-nike font-bold uppercase text-black text-sm">{item.author}</p>
               <p className="font-sans text-xs text-neutral-500">{item.role}</p>
             </div>
@@ -533,21 +533,21 @@ export const HomePage: React.FC = () => {
 
   // 8. VIP VAULT DISPATCH / NEWSLETTER
   const renderNewsletterSection = (settings?: Record<string, any>) => (
-    <section className="w-full bg-neutral-950 text-white py-20 border-t border-neutral-800">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+    <section className="w-full bg-neutral-950 text-white py-12 sm:py-16 border-t border-neutral-800">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
         <span className="font-sans text-xs font-bold text-neutral-400 uppercase tracking-widest block">
           {settings?.superTitle || 'EXCLUSIVE ACCESS'}
         </span>
-        <h2 className="font-nike text-4xl sm:text-6xl font-black uppercase text-white tracking-tight leading-none">
+        <h2 className="font-nike text-3xl sm:text-5xl font-black uppercase text-white tracking-tight leading-none">
           {settings?.title || 'JOIN THE RAYLUXX GUILD'}
         </h2>
-        <p className="font-sans text-base text-neutral-400 max-w-xl mx-auto font-normal">
+        <p className="font-sans text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto font-normal">
           {settings?.subtitle || 'Receive priority allocation notices 48 hours prior to public drops. Complimentary international shipping on your initial order.'}
         </p>
 
         {newsletterSubmitted ? (
-          <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-600/40 text-emerald-300 px-6 py-4 rounded-full text-sm font-bold">
-            <Check size={18} />
+          <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-600/40 text-emerald-300 px-6 py-3.5 rounded-full text-xs font-bold">
+            <Check size={16} />
             <span>VIP ALLOCATION CONFIRMED • WELCOME TO RAYLUXX</span>
           </div>
         ) : (
@@ -556,7 +556,7 @@ export const HomePage: React.FC = () => {
               e.preventDefault();
               if (newsletterEmail) setNewsletterSubmitted(true);
             }}
-            className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto pt-2"
+            className="flex flex-col sm:flex-row gap-2.5 max-w-md mx-auto pt-2"
           >
             <div className="relative flex-1">
               <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
@@ -566,12 +566,12 @@ export const HomePage: React.FC = () => {
                 placeholder="Enter client email..."
                 value={newsletterEmail}
                 onChange={(e) => setNewsletterEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-4 rounded-full bg-neutral-900 border border-neutral-700 text-white text-xs font-sans placeholder-neutral-500 focus:outline-none focus:border-white"
+                className="w-full pl-11 pr-4 py-3.5 rounded-full bg-neutral-900 border border-neutral-700 text-white text-xs font-sans placeholder-neutral-500 focus:outline-none focus:border-white"
               />
             </div>
             <button
               type="submit"
-              className="py-4 px-8 bg-white text-black font-sans text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors whitespace-nowrap cursor-pointer shadow-lg"
+              className="py-3.5 px-7 bg-white text-black font-sans text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors whitespace-nowrap cursor-pointer shadow-lg"
             >
               REQUEST ALLOCATION
             </button>
@@ -583,22 +583,22 @@ export const HomePage: React.FC = () => {
 
   // 9. CUSTOM PROMOTION BANNER
   const renderCustomBannerSection = (settings?: Record<string, any>) => (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-16">
-      <div className="p-8 sm:p-14 bg-black text-white rounded-3xl border border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-8">
-        <div className="space-y-3 max-w-xl">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-8 sm:my-10">
+      <div className="p-6 sm:p-10 bg-black text-white rounded-3xl border border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="space-y-2 max-w-xl">
           <span className="font-sans text-xs font-bold uppercase tracking-widest text-neutral-400 block">
             {settings?.superTitle || 'LIMITED ALLOCATION'}
           </span>
-          <h3 className="font-nike text-3xl sm:text-5xl font-black uppercase tracking-tight text-white leading-none">
+          <h3 className="font-nike text-2xl sm:text-4xl font-black uppercase tracking-tight text-white leading-none">
             {settings?.title || 'GLOBAL COLD-CLIMATE ARCHIVE'}
           </h3>
-          <p className="font-sans text-sm text-neutral-400">
+          <p className="font-sans text-xs sm:text-sm text-neutral-400">
             {settings?.subtitle || 'Bonded 3-layer seams rated for sub-zero wind chills. Hand-inspected in London.'}
           </p>
         </div>
         <button
           onClick={() => goToShop()}
-          className="py-4 px-8 bg-white text-black font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors cursor-pointer shrink-0"
+          className="py-3.5 px-7 bg-white text-black font-sans text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors cursor-pointer shrink-0 shadow-lg"
         >
           {settings?.buttonText || 'DISCOVER ARCHIVE'}
         </button>
