@@ -4,31 +4,31 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { ArrowLeft, CheckCircle2, CreditCard, ShieldCheck, Lock, Truck, ArrowRight, Package } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, CreditCard, ShieldCheck, Lock, Truck, ArrowRight } from 'lucide-react';
 
 export const CheckoutPage: React.FC = () => {
   const { cart, subtotal, discountAmount, promoCode, applyPromoCode, removePromoCode, finalTotal, clearCart } = useCart();
-  const { goToHome, goToShop, goToDashboard } = useNavigation();
+  const { goToHome, goToShop, goToTracking, goToSupport } = useNavigation();
   const { currentUser, openAuthModal } = useAuth();
   const { placeOrder } = useStore();
   const { formatPrice, convertPrice, currency, exchangeRate } = useCurrency();
 
-  const nameParts = currentUser ? currentUser.name.split(' ') : ['Marcus', 'Vance'];
+  const nameParts = currentUser ? currentUser.name.split(' ') : ['', ''];
 
   // Form states
-  const [email, setEmail] = useState(currentUser?.email || 'marcus.vance@studio.com');
-  const [firstName, setFirstName] = useState(nameParts[0] || 'Marcus');
-  const [lastName, setLastName] = useState(nameParts.slice(1).join(' ') || 'Vance');
-  const [address, setAddress] = useState('450 West 33rd Street, Fl 14');
-  const [city, setCity] = useState('New York');
-  const [state, setState] = useState('NY');
-  const [zip, setZip] = useState('10001');
+  const [email, setEmail] = useState(currentUser?.email || '');
+  const [firstName, setFirstName] = useState(nameParts[0] || '');
+  const [lastName, setLastName] = useState(nameParts.slice(1).join(' ') || '');
+  const [address, setAddress] = useState(currentUser?.address || '');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
   const [country, setCountry] = useState('United States');
   const [shippingSpeed, setShippingSpeed] = useState<'standard' | 'express' | 'priority'>('standard');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'apple' | 'klarna'>('card');
-  const [cardNumber, setCardNumber] = useState('•••• •••• •••• 4242');
-  const [cardExpiry, setCardExpiry] = useState('08/28');
-  const [cardCvc, setCardCvc] = useState('884');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'klarna'>('card');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
 
   const [promoInput, setPromoInput] = useState('');
   const [promoFeedback, setPromoFeedback] = useState<{ success: boolean; message: string } | null>(null);
@@ -159,25 +159,25 @@ export const CheckoutPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4">
+          <div className="pt-4 flex flex-col sm:flex-row justify-center gap-3">
             <button
-              onClick={() => goToDashboard('orders')}
-              className="px-8 py-4 bg-black text-white font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 shadow-lg"
+              onClick={() => goToTracking(placedOrderNumber)}
+              className="px-8 py-4 bg-black text-white font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 shadow-xl cursor-pointer"
             >
-              <Package size={16} />
-              <span>TRACK IN MEMBER DASHBOARD</span>
+              <Truck size={17} />
+              <span>TRACK SHIPMENT IN REAL-TIME</span>
+            </button>
+            <button
+              onClick={() => goToSupport()}
+              className="px-6 py-4 border border-neutral-300 font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:border-black transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>CLIENT SUPPORT DESK</span>
             </button>
             <button
               onClick={goToHome}
-              className="px-8 py-4 border border-neutral-300 font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:border-black transition-colors"
+              className="px-6 py-4 border border-neutral-300 font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:border-black transition-colors cursor-pointer"
             >
               RETURN TO STOREFRONT
-            </button>
-            <button
-              onClick={() => goToShop()}
-              className="px-8 py-4 border border-neutral-300 font-sans text-sm font-bold uppercase tracking-wider rounded-full hover:border-black transition-colors"
-            >
-              CONTINUE SHOPPING
             </button>
           </div>
 
@@ -235,27 +235,20 @@ export const CheckoutPage: React.FC = () => {
                 <span className="font-sans text-xs font-bold uppercase text-neutral-500 tracking-wider block">
                   EXPRESS CHECKOUT
                 </span>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => alert('Apple Pay express session initialized.')}
-                    className="py-3.5 bg-black text-white font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors rounded-lg"
+                    onClick={() => alert('PayPal express session initialized.')}
+                    className="py-3.5 bg-[#ffc439] hover:bg-[#f4b82d] text-blue-900 font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors rounded-lg cursor-pointer"
                   >
-                    <span>Pay</span>
+                    <span>PayPal</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => alert('Google Pay express session initialized.')}
-                    className="py-3.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors rounded-lg"
+                    className="py-3.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-black font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors rounded-lg cursor-pointer"
                   >
                     <span>G Pay</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => alert('PayPal express session initialized.')}
-                    className="py-3.5 bg-[#ffc439] hover:bg-[#f4b82d] text-blue-900 font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors rounded-lg"
-                  >
-                    <span>PayPal</span>
                   </button>
                 </div>
                 <div className="relative flex items-center justify-center pt-3">
@@ -300,6 +293,7 @@ export const CheckoutPage: React.FC = () => {
                     <input
                       type="email"
                       required
+                      placeholder="name@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black transition-colors rounded-sm"
@@ -321,6 +315,7 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         type="text"
                         required
+                        placeholder="First Name"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black rounded-sm"
@@ -333,6 +328,7 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         type="text"
                         required
+                        placeholder="Last Name"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black rounded-sm"
@@ -347,6 +343,7 @@ export const CheckoutPage: React.FC = () => {
                     <input
                       type="text"
                       required
+                      placeholder="Street address, suite or unit number"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black rounded-sm"
@@ -361,6 +358,7 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         type="text"
                         required
+                        placeholder="City"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black rounded-sm"
@@ -373,6 +371,7 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         type="text"
                         required
+                        placeholder="State / Region"
                         value={state}
                         onChange={(e) => setState(e.target.value)}
                         className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black rounded-sm"
@@ -385,6 +384,7 @@ export const CheckoutPage: React.FC = () => {
                       <input
                         type="text"
                         required
+                        placeholder="ZIP / Postal"
                         value={zip}
                         onChange={(e) => setZip(e.target.value)}
                         className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black rounded-sm"
@@ -493,22 +493,31 @@ export const CheckoutPage: React.FC = () => {
                     4. PAYMENT METHOD
                   </h3>
 
-                  <div className="flex gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('card')}
-                      className={`flex-1 py-3 px-4 border text-xs font-sans font-bold uppercase flex items-center justify-center gap-2 ${
-                        paymentMethod === 'card' ? 'border-black bg-black text-white' : 'border-neutral-200 text-neutral-700'
+                      className={`py-3 px-3 border text-xs font-sans font-bold uppercase flex items-center justify-center gap-1.5 cursor-pointer rounded-sm transition-colors ${
+                        paymentMethod === 'card' ? 'border-black bg-black text-white' : 'border-neutral-200 text-neutral-700 hover:border-neutral-400'
                       }`}
                     >
                       <CreditCard size={15} />
-                      <span>Credit Card</span>
+                      <span>Card</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('paypal')}
+                      className={`py-3 px-3 border text-xs font-sans font-bold uppercase flex items-center justify-center gap-1.5 cursor-pointer rounded-sm transition-colors ${
+                        paymentMethod === 'paypal' ? 'border-black bg-black text-white' : 'border-neutral-200 text-neutral-700 hover:border-neutral-400'
+                      }`}
+                    >
+                      <span className="font-extrabold tracking-tight">PayPal</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('klarna')}
-                      className={`flex-1 py-3 px-4 border text-xs font-sans font-bold uppercase flex items-center justify-center gap-2 ${
-                        paymentMethod === 'klarna' ? 'border-black bg-black text-white' : 'border-neutral-200 text-neutral-700'
+                      className={`py-3 px-3 border text-xs font-sans font-bold uppercase flex items-center justify-center gap-1.5 cursor-pointer rounded-sm transition-colors ${
+                        paymentMethod === 'klarna' ? 'border-black bg-black text-white' : 'border-neutral-200 text-neutral-700 hover:border-neutral-400'
                       }`}
                     >
                       <span>Klarna 4x</span>
@@ -524,6 +533,7 @@ export const CheckoutPage: React.FC = () => {
                         <input
                           type="text"
                           required
+                          placeholder="1234 5678 9012 3456"
                           value={cardNumber}
                           onChange={(e) => setCardNumber(e.target.value)}
                           className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black bg-white rounded-sm"
@@ -537,6 +547,7 @@ export const CheckoutPage: React.FC = () => {
                           <input
                             type="text"
                             required
+                            placeholder="MM/YY"
                             value={cardExpiry}
                             onChange={(e) => setCardExpiry(e.target.value)}
                             className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black bg-white rounded-sm"
@@ -549,12 +560,27 @@ export const CheckoutPage: React.FC = () => {
                           <input
                             type="text"
                             required
+                            placeholder="CVC"
                             value={cardCvc}
                             onChange={(e) => setCardCvc(e.target.value)}
                             className="w-full border border-neutral-300 px-4 py-3 text-sm font-sans focus:outline-none focus:border-black bg-white rounded-sm"
                           />
                         </div>
                       </div>
+                    </div>
+                  ) : paymentMethod === 'paypal' ? (
+                    <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-sm font-sans text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold flex items-center gap-1.5 text-blue-900">
+                          PayPal Express Checkout
+                        </span>
+                        <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded uppercase font-semibold">
+                          Buyer Protection
+                        </span>
+                      </div>
+                      <p className="text-blue-900/80 text-xs leading-relaxed">
+                        After clicking place order, you will be redirected to PayPal to complete your purchase securely.
+                      </p>
                     </div>
                   ) : (
                     <div className="p-4 bg-pink-50 border border-pink-200 font-sans text-xs text-neutral-700 space-y-1">

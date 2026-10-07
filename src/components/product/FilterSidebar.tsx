@@ -11,10 +11,11 @@ interface FilterSidebarProps {
 
 const CATEGORIES = [
   { id: 'ALL', label: 'All Caps' },
-  { id: 'TECHNICAL', label: 'GORE-TEX® & Alpine' },
-  { id: 'STRUCTURED', label: 'Monolith 6-Panel' },
-  { id: 'CAMP_CAP', label: 'Cordura® 5-Panel Camp' },
+  { id: 'TECHNICAL', label: 'GORE-TEX® Technical' },
+  { id: 'STRUCTURED', label: 'Structured 6-Panel' },
+  { id: 'CAMP_CAP', label: '5-Panel Camp' },
   { id: 'RUNNER', label: 'Aerorunner Speed' },
+  { id: 'COLLABORATION', label: 'Collaborations' },
 ];
 
 const MATERIALS = [

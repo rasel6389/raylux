@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
-import { useCurrency } from '../../context/CurrencyContext';
+import { useCurrency, CurrencyCode } from '../../context/CurrencyContext';
 import { useStore } from '../../context/StoreContext';
 import {
   ShoppingBag,
@@ -13,11 +13,12 @@ import {
   User,
   ArrowRight,
   Camera,
-  LogOut,
-  Globe,
   Sparkles,
   ChevronDown,
+  Check,
 } from 'lucide-react';
+
+type MegaMenuType = 'goretex' | 'sixpanel' | 'fivepanel' | null;
 
 export const Navbar: React.FC = () => {
   const { totalItems, openCart } = useCart();
@@ -27,18 +28,26 @@ export const Navbar: React.FC = () => {
     goToHome,
     goToDashboard,
     goToLookbook,
+    goToProduct,
     goToAdmin,
+    goToSupport,
+    goToTracking,
     searchQuery,
     setSearchQuery,
+    shopCategoryFilter,
   } = useNavigation();
   const { currentUser, logout, openAuthModal } = useAuth();
   const { currency, setCurrency, openCurrencyModal } = useCurrency();
   const { wishlist, announcementConfig } = useStore();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeMegaMenu, setActiveMegaMenu] = useState<'featured' | 'goretex' | null>(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
+  const [activeMegaMenu, setActiveMegaMenu] = useState<MegaMenuType>(null);
+  const megaMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const currencyDropdownRef = useRef<HTMLDivElement>(null);
 
   const [isAnnouncementDismissed, setIsAnnouncementDismissed] = useState(() => {
     try {
@@ -48,11 +57,32 @@ export const Navbar: React.FC = () => {
     }
   });
 
-  // Close search popover on outside click
+  // Handle Mega Menu Hover with smooth delay to prevent flickering
+  const handleMouseEnterNav = (menu: MegaMenuType) => {
+    if (megaMenuTimeoutRef.current) {
+      clearTimeout(megaMenuTimeoutRef.current);
+    }
+    setActiveMegaMenu(menu);
+  };
+
+  const handleMouseLeaveNav = () => {
+    if (megaMenuTimeoutRef.current) {
+      clearTimeout(megaMenuTimeoutRef.current);
+    }
+    megaMenuTimeoutRef.current = setTimeout(() => {
+      setActiveMegaMenu(null);
+    }, 150);
+  };
+
+  // Close search and currency popovers on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (searchContainerRef.current && !searchContainerRef.current.contains(target)) {
         setSearchFocused(false);
+      }
+      if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(target)) {
+        setCurrencyDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -82,171 +112,48 @@ export const Navbar: React.FC = () => {
     goToShop(category, query);
   };
 
-  const userFirstName = currentUser ? currentUser.name.split(' ')[0] : '';
+  const currencyItems = [
+    { code: 'USD' as CurrencyCode, symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
+    { code: 'GBP' as CurrencyCode, symbol: '£', name: 'British Pound', flag: '🇬🇧' },
+    { code: 'EUR' as CurrencyCode, symbol: '€', name: 'Euro', flag: '🇪🇺' },
+  ];
+
+  const activeCurrencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
 
   return (
     <>
-      {/* 1. TOP UTILITY BAR (Authentic Nike & Adidas Global Flagship) */}
-      <div className="bg-[#f5f5f5] text-[#666666] text-[11px] font-sans font-medium h-8 border-b border-neutral-200/80 hidden sm:flex items-center justify-between px-6 sm:px-10 select-none">
-        
-        {/* Left: Brand Innovation Badge & Adidas-style 3-stripe minimalism */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={goToHome}
-            className="flex items-center gap-1.5 font-sans text-[11px] font-bold tracking-wider text-black hover:text-neutral-600 transition-colors uppercase"
-          >
-            {/* Minimal Adidas 3-Stripe Geometric Mark */}
-            <span className="inline-flex gap-0.5 items-end h-2.5">
-              <span className="w-0.5 h-1.5 bg-black rounded-xs"></span>
-              <span className="w-0.5 h-2 bg-black rounded-xs"></span>
-              <span className="w-0.5 h-2.5 bg-black rounded-xs"></span>
-            </span>
-            <span>RAYLUXX ATHLETICS</span>
-          </button>
-          <span className="text-neutral-300">|</span>
-          <span className="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">
-            TECHNICAL HEADWEAR SPEC
-          </span>
-        </div>
-
-        {/* Right: Member Utility & Region Switcher */}
-        <div className="flex items-center gap-3.5">
-          {currentUser ? (
-            <>
-              <button
-                onClick={() => goToDashboard('user')}
-                className="hover:text-black font-semibold text-black transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                {currentUser.avatar ? (
-                  <img src={currentUser.avatar} alt={currentUser.name} className="w-4 h-4 rounded-full object-cover" />
-                ) : (
-                  <span className="w-4 h-4 rounded-full bg-black text-white text-[9px] font-bold flex items-center justify-center">
-                    {userFirstName[0]}
-                  </span>
-                )}
-                <span>Hi, {userFirstName}</span>
-              </button>
-              <span className="text-neutral-300">|</span>
-              <button
-                onClick={() => goToDashboard('orders')}
-                className="hover:text-black transition-colors cursor-pointer"
-              >
-                Orders
-              </button>
-              <span className="text-neutral-300">|</span>
-              <button
-                onClick={logout}
-                className="hover:text-black transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <LogOut size={11} />
-                <span>Sign Out</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => goToShop()}
-                className="hover:text-black transition-colors cursor-pointer"
-              >
-                Find a Store
-              </button>
-              <span className="text-neutral-300">|</span>
-              <button
-                onClick={() => openAuthModal('signin')}
-                className="hover:text-black transition-colors cursor-pointer"
-              >
-                Help
-              </button>
-              <span className="text-neutral-300">|</span>
-              <button
-                onClick={() => openAuthModal('signup')}
-                className="hover:text-black font-bold text-black transition-colors cursor-pointer"
-              >
-                Join Us
-              </button>
-              <span className="text-neutral-300">|</span>
-              <button
-                onClick={() => openAuthModal('signin')}
-                className="hover:text-black font-bold text-black transition-colors cursor-pointer"
-              >
-                Sign In
-              </button>
-            </>
-          )}
-
-          <span className="text-neutral-300">|</span>
-
-          {/* Tri-Currency Switcher Pill */}
-          <div className="flex items-center bg-neutral-200/70 p-0.5 rounded-full text-[10px] font-bold">
-            {(['USD', 'GBP', 'EUR'] as const).map((c) => (
-              <button
-                key={c}
-                onClick={() => setCurrency(c)}
-                className={`px-2 py-0.5 rounded-full transition-all cursor-pointer ${
-                  currency === c
-                    ? 'bg-white text-black shadow-2xs font-black'
-                    : 'text-neutral-600 hover:text-black'
-                }`}
-                title={`Switch currency to ${c}`}
-              >
-                {c === 'USD' ? '$ USD' : c === 'GBP' ? '£ GBP' : '€ EUR'}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={openCurrencyModal}
-            className="hover:text-black transition-colors flex items-center gap-1 text-[11px] font-semibold text-neutral-600 cursor-pointer"
-            title="Open Region & Currency Selector"
-          >
-            <Globe size={12} />
-            <span>Region</span>
-          </button>
-
-          <span className="text-neutral-300">|</span>
-
-          {/* Admin Link */}
-          <button
-            onClick={goToAdmin}
-            className="hover:text-black font-bold text-black transition-colors flex items-center gap-1 cursor-pointer"
-            title="Access Staff Operations Portal"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Admin</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. MAIN NIKE & ADIDAS COMBINATION HEADER */}
+      {/* NIKE-STYLE ARCHITECTURAL FLAGSHIP HEADER */}
       <header
-        className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-neutral-200 transition-all select-none"
-        onMouseLeave={() => setActiveMegaMenu(null)}
+        className="sticky top-0 z-40 w-full bg-white/98 backdrop-blur-md border-b border-neutral-200 select-none font-sans"
+        onMouseLeave={handleMouseLeaveNav}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
           
-          {/* Mobile Menu Trigger & Currency Pill */}
-          <div className="flex items-center gap-2 lg:hidden">
+          {/* Left: Mobile Menu Trigger & Mobile Currency Badge */}
+          <div className="flex items-center gap-2 lg:hidden flex-shrink-0">
             <button
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-label="Toggle Navigation Menu"
-              className="p-1.5 -ml-1.5 text-black hover:bg-neutral-100 rounded-full transition-colors focus:outline-none"
+              className="p-1.5 -ml-1.5 text-black hover:bg-neutral-100 rounded-full transition-colors focus:outline-none cursor-pointer"
             >
               {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
             <button
               onClick={openCurrencyModal}
-              className="px-2 py-0.5 bg-neutral-100 hover:bg-neutral-200 rounded-full border border-neutral-200 text-[10px] font-bold text-black flex items-center gap-1 transition-colors"
+              className="px-2 py-1 bg-neutral-100 hover:bg-neutral-200 rounded-full border border-neutral-200 text-[11px] font-bold text-black flex items-center gap-1 transition-colors cursor-pointer"
+              title="Change Currency"
             >
-              <Globe size={11} />
+              <span>{activeCurrencySymbol}</span>
               <span>{currency}</span>
             </button>
           </div>
 
-          {/* BRAND WORDMARK (Iconic Nike Monumental Typography) */}
-          <div className="flex items-center">
+          {/* Left / Center: BRAND LOGO */}
+          <div className="flex items-center flex-shrink-0">
             <button
               onClick={goToHome}
               className="group flex items-center gap-2 text-left focus:outline-none cursor-pointer"
+              aria-label="RAYLUXX Home"
             >
               <span className="font-nike text-3xl sm:text-4xl font-black tracking-tighter text-black group-hover:opacity-85 transition-opacity">
                 RAYLUXX
@@ -254,74 +161,115 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          {/* DESKTOP NAV LINKS (Nike Font & Weight with Interactive Mega Previews) */}
-          <nav className="hidden lg:flex items-center space-x-7 font-sans text-[14px] font-semibold tracking-normal text-neutral-900">
+          {/* CENTER: DESKTOP CATEGORY NAV (Nike Style: Short, Punchy, Never Wraps) */}
+          <nav className="hidden lg:flex items-center justify-center space-x-5 xl:space-x-7 font-sans text-[14px] font-bold text-neutral-800 tracking-tight whitespace-nowrap h-full">
+            
+            {/* 1. Shop All */}
             <button
-              onClick={goToHome}
-              onMouseEnter={() => setActiveMegaMenu('featured')}
-              className={`py-5 transition-colors relative cursor-pointer ${
-                currentPage === 'home'
-                  ? 'text-black font-extrabold after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-black'
-                  : 'hover:text-neutral-500'
-              }`}
-            >
-              New & Featured
-            </button>
-
-            <button
-              onClick={() => goToShop('STRUCTURED')}
-              onMouseEnter={() => setActiveMegaMenu(null)}
-              className="py-5 hover:text-neutral-500 transition-colors cursor-pointer"
-            >
-              Men's Caps
-            </button>
-
-            <button
-              onClick={() => goToShop('TECHNICAL')}
-              onMouseEnter={() => setActiveMegaMenu('goretex')}
-              className="py-5 hover:text-neutral-500 transition-colors cursor-pointer flex items-center gap-1"
-            >
-              <span>GORE-TEX® Series</span>
-              <ChevronDown size={13} className="text-neutral-400" />
-            </button>
-
-            <button
-              onClick={goToLookbook}
-              onMouseEnter={() => setActiveMegaMenu(null)}
-              className={`py-5 transition-colors relative flex items-center gap-1 cursor-pointer ${
-                currentPage === 'lookbook'
-                  ? 'text-black font-extrabold after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-black'
-                  : 'hover:text-neutral-500'
-              }`}
-            >
-              <span>Lookbook</span>
-            </button>
-
-            <button
-              onClick={() => goToShop()}
-              onMouseEnter={() => setActiveMegaMenu(null)}
-              className={`py-5 transition-colors relative cursor-pointer ${
-                currentPage === 'shop'
-                  ? 'text-black font-extrabold after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-black'
-                  : 'hover:text-neutral-500'
+              onClick={() => { goToShop(); setActiveMegaMenu(null); }}
+              onMouseEnter={() => handleMouseEnterNav(null)}
+              className={`h-full flex items-center px-1 transition-colors relative whitespace-nowrap flex-shrink-0 cursor-pointer ${
+                currentPage === 'shop' && (!shopCategoryFilter || shopCategoryFilter === 'ALL')
+                  ? 'text-black font-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2.5px] after:bg-black'
+                  : 'text-neutral-700 hover:text-black'
               }`}
             >
               Shop All
             </button>
+
+            {/* 2. GORE-TEX® Series */}
+            <div
+              className="h-full flex items-center relative"
+              onMouseEnter={() => handleMouseEnterNav('goretex')}
+            >
+              <button
+                onClick={() => { goToShop('TECHNICAL'); setActiveMegaMenu(null); }}
+                className={`h-full flex items-center gap-1 px-1 transition-colors relative whitespace-nowrap flex-shrink-0 cursor-pointer ${
+                  currentPage === 'shop' && shopCategoryFilter === 'TECHNICAL'
+                    ? 'text-black font-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2.5px] after:bg-black'
+                    : 'text-neutral-700 hover:text-black'
+                }`}
+              >
+                <span>GORE-TEX®</span>
+                <ChevronDown size={12} className={`text-neutral-400 transition-transform duration-200 ${activeMegaMenu === 'goretex' ? 'rotate-180 text-black' : ''}`} />
+              </button>
+            </div>
+
+            {/* 3. 6-Panel Series */}
+            <div
+              className="h-full flex items-center relative"
+              onMouseEnter={() => handleMouseEnterNav('sixpanel')}
+            >
+              <button
+                onClick={() => { goToShop('STRUCTURED'); setActiveMegaMenu(null); }}
+                className={`h-full flex items-center gap-1 px-1 transition-colors relative whitespace-nowrap flex-shrink-0 cursor-pointer ${
+                  currentPage === 'shop' && shopCategoryFilter === 'STRUCTURED'
+                    ? 'text-black font-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2.5px] after:bg-black'
+                    : 'text-neutral-700 hover:text-black'
+                }`}
+              >
+                <span>6-Panel</span>
+                <ChevronDown size={12} className={`text-neutral-400 transition-transform duration-200 ${activeMegaMenu === 'sixpanel' ? 'rotate-180 text-black' : ''}`} />
+              </button>
+            </div>
+
+            {/* 4. 5-Panel Camp */}
+            <div
+              className="h-full flex items-center relative"
+              onMouseEnter={() => handleMouseEnterNav('fivepanel')}
+            >
+              <button
+                onClick={() => { goToShop('CAMP_CAP'); setActiveMegaMenu(null); }}
+                className={`h-full flex items-center gap-1 px-1 transition-colors relative whitespace-nowrap flex-shrink-0 cursor-pointer ${
+                  currentPage === 'shop' && shopCategoryFilter === 'CAMP_CAP'
+                    ? 'text-black font-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2.5px] after:bg-black'
+                    : 'text-neutral-700 hover:text-black'
+                }`}
+              >
+                <span>5-Panel</span>
+                <ChevronDown size={12} className={`text-neutral-400 transition-transform duration-200 ${activeMegaMenu === 'fivepanel' ? 'rotate-180 text-black' : ''}`} />
+              </button>
+            </div>
+
+            {/* 5. Aerorunner */}
+            <button
+              onClick={() => { goToShop('RUNNER'); setActiveMegaMenu(null); }}
+              onMouseEnter={() => handleMouseEnterNav(null)}
+              className={`h-full flex items-center px-1 transition-colors relative whitespace-nowrap flex-shrink-0 cursor-pointer ${
+                currentPage === 'shop' && shopCategoryFilter === 'RUNNER'
+                  ? 'text-black font-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2.5px] after:bg-black'
+                  : 'text-neutral-700 hover:text-black'
+              }`}
+            >
+              Runner
+            </button>
+
+            {/* 6. Lookbook */}
+            <button
+              onClick={() => { goToLookbook(); setActiveMegaMenu(null); }}
+              onMouseEnter={() => handleMouseEnterNav(null)}
+              className={`h-full flex items-center px-1 transition-colors relative whitespace-nowrap flex-shrink-0 cursor-pointer ${
+                currentPage === 'lookbook'
+                  ? 'text-black font-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2.5px] after:bg-black'
+                  : 'text-neutral-700 hover:text-black'
+              }`}
+            >
+              Lookbook
+            </button>
           </nav>
 
-          {/* RIGHT ACTIONS: NIKE SEARCH PILL + WISHLIST + BAG + PROFILE */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* RIGHT ACTIONS: SEARCH + SERIAL CURRENCY DROPDOWN + WISHLIST + BAG + PROFILE */}
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
             
-            {/* Nike Search Pill Input with Interactive Suggestions */}
+            {/* Nike Search Pill Input (Compact, doesn't steal space) */}
             <div ref={searchContainerRef} className="relative hidden md:block">
               <form onSubmit={handleSearchSubmit}>
                 <div
-                  className={`flex items-center bg-[#f5f5f5] hover:bg-[#eaeaea] focus-within:bg-white rounded-full px-3.5 py-2 transition-all border ${
-                    searchFocused ? 'border-black w-60 shadow-md bg-white' : 'border-transparent w-44 lg:w-52'
+                  className={`flex items-center bg-[#f5f5f5] hover:bg-[#eaeaea] focus-within:bg-white rounded-full px-3 py-1.5 transition-all border ${
+                    searchFocused ? 'border-black w-48 lg:w-56 shadow-md bg-white' : 'border-transparent w-32 lg:w-40'
                   }`}
                 >
-                  <Search size={16} className="text-neutral-500 mr-2 flex-shrink-0" />
+                  <Search size={14} className="text-neutral-500 mr-2 flex-shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Caps..."
@@ -334,15 +282,15 @@ export const Navbar: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="text-neutral-400 hover:text-black p-0.5"
+                      className="text-neutral-400 hover:text-black p-0.5 cursor-pointer"
                     >
-                      <X size={13} />
+                      <X size={12} />
                     </button>
                   )}
                 </div>
               </form>
 
-              {/* Interactive Search Suggestions Popover (Nike.com style) */}
+              {/* Search Suggestions Popover */}
               {searchFocused && (
                 <div className="absolute top-full mt-2 left-0 w-72 bg-white rounded-2xl shadow-2xl border border-neutral-200 p-4 z-50 animate-fadeIn">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-2">
@@ -366,23 +314,23 @@ export const Navbar: React.FC = () => {
                   <div className="space-y-1">
                     <button
                       onMouseDown={() => handleSearchSuggestionClick('Structured', 'STRUCTURED')}
-                      className="w-full text-left text-xs font-semibold py-1.5 px-2 hover:bg-neutral-50 rounded-lg flex items-center justify-between text-neutral-800"
+                      className="w-full text-left text-xs font-semibold py-1.5 px-2 hover:bg-neutral-50 rounded-lg flex items-center justify-between text-neutral-800 cursor-pointer"
                     >
-                      <span>Monolith 6-Panel Series</span>
+                      <span>6-Panel Monolith Series</span>
                       <ArrowRight size={12} className="text-neutral-400" />
                     </button>
                     <button
                       onMouseDown={() => handleSearchSuggestionClick('Technical', 'TECHNICAL')}
-                      className="w-full text-left text-xs font-semibold py-1.5 px-2 hover:bg-neutral-50 rounded-lg flex items-center justify-between text-neutral-800"
+                      className="w-full text-left text-xs font-semibold py-1.5 px-2 hover:bg-neutral-50 rounded-lg flex items-center justify-between text-neutral-800 cursor-pointer"
                     >
-                      <span>GORE-TEX® Waterproof Alpine</span>
+                      <span>GORE-TEX® Alpine Series</span>
                       <ArrowRight size={12} className="text-neutral-400" />
                     </button>
                     <button
                       onMouseDown={() => handleSearchSuggestionClick('Camp', 'CAMP_CAP')}
-                      className="w-full text-left text-xs font-semibold py-1.5 px-2 hover:bg-neutral-50 rounded-lg flex items-center justify-between text-neutral-800"
+                      className="w-full text-left text-xs font-semibold py-1.5 px-2 hover:bg-neutral-50 rounded-lg flex items-center justify-between text-neutral-800 cursor-pointer"
                     >
-                      <span>Cordura® 500D Tactical Camp</span>
+                      <span>5-Panel Cordura® Camp</span>
                       <ArrowRight size={12} className="text-neutral-400" />
                     </button>
                   </div>
@@ -390,14 +338,84 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Wishlist / Favorites Heart Button with Live Counter */}
+            {/* COMPACT SERIAL CURRENCY DROPDOWN */}
+            <div ref={currencyDropdownRef} className="relative hidden sm:block">
+              <button
+                type="button"
+                onClick={() => setCurrencyDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold font-sans bg-neutral-100 hover:bg-neutral-200 text-black border border-neutral-200 transition-colors cursor-pointer"
+                title="Select Store Currency"
+                aria-label="Currency Selector"
+              >
+                <span>{activeCurrencySymbol}</span>
+                <span>{currency}</span>
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform duration-200 text-neutral-500 ${
+                    currencyDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {currencyDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-neutral-200 p-2 z-50 animate-fadeIn">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 mb-1">
+                    Select Currency
+                  </div>
+                  <div className="space-y-1">
+                    {currencyItems.map((item) => {
+                      const isSelected = currency === item.code;
+                      return (
+                        <button
+                          key={item.code}
+                          type="button"
+                          onClick={() => {
+                            setCurrency(item.code);
+                            setCurrencyDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-black text-white font-bold shadow-xs'
+                              : 'text-neutral-800 hover:bg-neutral-100'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="text-sm">{item.flag}</span>
+                            <span>{item.symbol} {item.code}</span>
+                          </span>
+                          {isSelected ? (
+                            <Check size={14} className="text-white" />
+                          ) : (
+                            <span className="text-[10px] text-neutral-400">{item.name}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="pt-2 mt-1 border-t border-neutral-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrencyDropdownOpen(false);
+                        openCurrencyModal();
+                      }}
+                      className="w-full text-center text-[11px] font-semibold text-neutral-500 hover:text-black py-1 cursor-pointer"
+                    >
+                      All Regional Details →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Wishlist / Favorites */}
             <button
               onClick={() => goToDashboard('wishlist')}
               title="Saved Favorites"
               className="p-2 text-neutral-800 hover:text-black hover:bg-neutral-100 rounded-full transition-colors relative cursor-pointer"
               aria-label="Favorites"
             >
-              <Heart size={20} />
+              <Heart size={19} />
               {wishlist && wishlist.length > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-600 text-white font-sans text-[10px] font-black flex items-center justify-center shadow-xs animate-scaleIn">
                   {wishlist.length}
@@ -405,13 +423,13 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            {/* Shopping Bag Button (Nike style with counter) */}
+            {/* Shopping Bag */}
             <button
               onClick={openCart}
               aria-label="Shopping Bag"
               className="p-2 text-neutral-800 hover:text-black hover:bg-neutral-100 rounded-full transition-colors relative cursor-pointer"
             >
-              <ShoppingBag size={20} />
+              <ShoppingBag size={19} />
               {totalItems > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black text-white font-sans text-[10px] font-black flex items-center justify-center shadow-xs">
                   {totalItems}
@@ -439,7 +457,7 @@ export const Navbar: React.FC = () => {
                   className="w-5 h-5 rounded-full object-cover border border-neutral-300"
                 />
               ) : (
-                <User size={20} />
+                <User size={19} />
               )}
               {currentUser && (
                 <span className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
@@ -449,189 +467,223 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* 2B. MEGA-MENU HOVER DROPDOWN (Nike.com style) */}
+        {/* NIKE-STYLE INTERACTIVE MEGA-MENU DROPDOWN (Absolute floating to prevent page jump) */}
         {activeMegaMenu && (
           <div
-            className="w-full bg-white border-t border-neutral-200 shadow-xl py-8 px-6 sm:px-12 animate-fadeIn"
-            onMouseEnter={() => setActiveMegaMenu(activeMegaMenu)}
-            onMouseLeave={() => setActiveMegaMenu(null)}
+            className="absolute top-full left-0 w-full bg-white border-b border-neutral-200 shadow-2xl py-8 px-6 sm:px-12 animate-fadeIn z-50 font-sans"
+            onMouseEnter={() => handleMouseEnterNav(activeMegaMenu)}
+            onMouseLeave={handleMouseLeaveNav}
           >
-            <div className="max-w-7xl mx-auto grid grid-cols-12 gap-8 text-xs font-sans">
-              {activeMegaMenu === 'featured' ? (
-                <>
-                  <div className="col-span-3 space-y-3">
-                    <span className="font-nike text-sm font-bold tracking-tight uppercase text-black block">
-                      FEATURED DROPS
-                    </span>
-                    <ul className="space-y-2 text-neutral-600 font-medium">
-                      <li>
-                        <button
-                          onClick={() => { goToShop(); setActiveMegaMenu(null); }}
-                          className="hover:text-black transition-colors"
-                        >
-                          New Releases 2026
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          onClick={() => { goToShop('STRUCTURED'); setActiveMegaMenu(null); }}
-                          className="hover:text-black transition-colors"
-                        >
-                          Monolith 01 // Onyx Heavy Twill
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          onClick={() => { goToShop('TECHNICAL'); setActiveMegaMenu(null); }}
-                          className="hover:text-black transition-colors"
-                        >
-                          Apex Storm // GORE-TEX 3L
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          onClick={() => { goToLookbook(); setActiveMegaMenu(null); }}
-                          className="hover:text-black transition-colors font-bold text-black"
-                        >
-                          View 2026 Lookbook Archive
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="col-span-3 space-y-3">
-                    <span className="font-nike text-sm font-bold tracking-tight uppercase text-black block">
-                      HEADWEAR DIVISIONS
-                    </span>
-                    <ul className="space-y-2 text-neutral-600 font-medium">
-                      <li>
-                        <button
-                          onClick={() => { goToShop('STRUCTURED'); setActiveMegaMenu(null); }}
-                          className="hover:text-black transition-colors"
-                        >
-                          Structured 6-Panel Caps
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          onClick={() => { goToShop('CAMP_CAP'); setActiveMegaMenu(null); }}
-                          className="hover:text-black transition-colors"
-                        >
-                          Cordura® 500D 5-Panel Camp
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          onClick={() => { goToShop('RUNNER'); setActiveMegaMenu(null); }}
-                          className="hover:text-black transition-colors"
-                        >
-                          Aerorunner 48g Featherlight
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="col-span-6 grid grid-cols-2 gap-4">
-                    <div
-                      onClick={() => { goToShop('STRUCTURED'); setActiveMegaMenu(null); }}
-                      className="group/card cursor-pointer relative aspect-[16/10] rounded-xl overflow-hidden bg-neutral-100"
-                    >
-                      <img
-                        src="https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=600&q=80"
-                        alt="Monolith Series"
-                        className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 flex flex-col justify-end text-white">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300">
-                          DIVISION 01
-                        </span>
-                        <p className="font-nike text-base font-bold uppercase">MONOLITH HEAVY TWILL</p>
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => { goToShop('TECHNICAL'); setActiveMegaMenu(null); }}
-                      className="group/card cursor-pointer relative aspect-[16/10] rounded-xl overflow-hidden bg-neutral-100"
-                    >
-                      <img
-                        src="https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=600&q=80"
-                        alt="GORE-TEX Series"
-                        className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 flex flex-col justify-end text-white">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300">
-                          DIVISION 02
-                        </span>
-                        <p className="font-nike text-base font-bold uppercase">GORE-TEX® 3L ALPINE</p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
+            <div className="max-w-7xl mx-auto">
+              {/* 1. GORE-TEX Mega Menu */}
+              {activeMegaMenu === 'goretex' && (
+                <div className="grid grid-cols-12 gap-8 items-start">
                   <div className="col-span-4 space-y-3">
-                    <span className="font-nike text-sm font-bold tracking-tight uppercase text-black block">
-                      GORE-TEX® 3-LAYER INNOVATION
+                    <span className="font-nike text-sm font-black tracking-tight uppercase text-black block">
+                      GORE-TEX® ALPINE SERIES
                     </span>
                     <p className="text-neutral-600 leading-relaxed text-xs font-normal">
-                      Every cap in the GORE-TEX® series features a 28,000mm hydrostatic head waterproof barrier, bonded taped interior seams, and laser-perforated thermal regulation vents.
+                      Engineered with authentic 3-layer waterproof-breathable GORE-TEX Pro membrane, 100% seam-sealed tape, and laser micro-perforations for high-output alpine transit.
                     </p>
-                    <button
-                      onClick={() => { goToShop('TECHNICAL'); setActiveMegaMenu(null); }}
-                      className="inline-flex items-center gap-1.5 font-bold uppercase text-black hover:underline pt-1"
-                    >
-                      <span>Explore Technical Series</span>
-                      <ArrowRight size={13} />
-                    </button>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => { goToShop('TECHNICAL'); setActiveMegaMenu(null); }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-black text-white text-xs font-bold uppercase rounded-full hover:bg-neutral-800 transition-colors cursor-pointer"
+                      >
+                        <span>EXPLORE ALL GORE-TEX® CAPS</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="col-span-8 grid grid-cols-3 gap-4">
-                    {[
-                      {
-                        title: 'APEX STORM // GORE-TEX',
-                        sub: 'Alpine Membrane 3L',
-                        img: 'https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=400&q=80',
-                      },
-                      {
-                        title: 'AERORUNNER 48G',
-                        sub: 'Featherlight Ripstop',
-                        img: 'https://images.unsplash.com/photo-1534215754734-18e55d13e346?auto=format&fit=crop&w=400&q=80',
-                      },
-                      {
-                        title: 'CIPHER 04 // CORDURA',
-                        sub: 'Mil-Spec Ballistic 500D',
-                        img: 'https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=400&q=80',
-                      },
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => { goToShop('TECHNICAL'); setActiveMegaMenu(null); }}
-                        className="group/item cursor-pointer space-y-2"
-                      >
-                        <div className="aspect-square rounded-xl overflow-hidden bg-neutral-100">
-                          <img
-                            src={item.img}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
-                          />
-                        </div>
-                        <div>
-                          <p className="font-nike font-bold uppercase text-black text-xs group-hover/item:underline">
-                            {item.title}
-                          </p>
-                          <p className="text-[11px] text-neutral-500">{item.sub}</p>
-                        </div>
+                  <div className="col-span-8 grid grid-cols-2 gap-6">
+                    <div
+                      onClick={() => { goToProduct('rlx-02-apex-storm'); setActiveMegaMenu(null); }}
+                      className="group/item cursor-pointer p-4 rounded-2xl border border-neutral-200 hover:border-black transition-all bg-neutral-50/50 flex gap-4 items-center"
+                    >
+                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1575428652377-a2d80e2277fc?auto=format&fit=crop&w=400&q=80"
+                          alt="Apex Storm"
+                          className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                        />
                       </div>
-                    ))}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">GORE-TEX 3L</span>
+                        <h4 className="font-nike text-base font-bold uppercase text-black leading-tight group-hover/item:underline">
+                          APEX STORM // 3L
+                        </h4>
+                        <p className="text-xs text-neutral-600 font-medium">$110 USD • 28,000mm Waterproof</p>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => { goToProduct('rlx-06-geo-grid'); setActiveMegaMenu(null); }}
+                      className="group/item cursor-pointer p-4 rounded-2xl border border-neutral-200 hover:border-black transition-all bg-neutral-50/50 flex gap-4 items-center"
+                    >
+                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=400&q=80"
+                          alt="Geo Grid"
+                          className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">ALPINE EDITION</span>
+                        <h4 className="font-nike text-base font-bold uppercase text-black leading-tight group-hover/item:underline">
+                          GEO-GRID PRO // STORM
+                        </h4>
+                        <p className="text-xs text-neutral-600 font-medium">$105 USD • Bonded Seams</p>
+                      </div>
+                    </div>
                   </div>
-                </>
+                </div>
+              )}
+
+              {/* 2. 6-Panel Mega Menu */}
+              {activeMegaMenu === 'sixpanel' && (
+                <div className="grid grid-cols-12 gap-8 items-start">
+                  <div className="col-span-4 space-y-3">
+                    <span className="font-nike text-sm font-black tracking-tight uppercase text-black block">
+                      STRUCTURED 6-PANEL ARCHITECTURE
+                    </span>
+                    <p className="text-neutral-600 leading-relaxed text-xs font-normal">
+                      Definitive architectural crowns reinforced with rigid inner buckram, 340 GSM heavy twill weaves, and CNC-machined matte hardware.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => { goToShop('STRUCTURED'); setActiveMegaMenu(null); }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-black text-white text-xs font-bold uppercase rounded-full hover:bg-neutral-800 transition-colors cursor-pointer"
+                      >
+                        <span>VIEW ALL 6-PANEL CAPS</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="col-span-8 grid grid-cols-2 gap-6">
+                    <div
+                      onClick={() => { goToProduct('rlx-01-onyx'); setActiveMegaMenu(null); }}
+                      className="group/item cursor-pointer p-4 rounded-2xl border border-neutral-200 hover:border-black transition-all bg-neutral-50/50 flex gap-4 items-center"
+                    >
+                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=400&q=80"
+                          alt="Monolith 01"
+                          className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">SERIES 01</span>
+                        <h4 className="font-nike text-base font-bold uppercase text-black leading-tight group-hover/item:underline">
+                          MONOLITH 01 // ONYX
+                        </h4>
+                        <p className="text-xs text-neutral-600 font-medium">$85 USD • 340 GSM Heavy Twill</p>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => { goToProduct('rlx-03-bone-archetype'); setActiveMegaMenu(null); }}
+                      className="group/item cursor-pointer p-4 rounded-2xl border border-neutral-200 hover:border-black transition-all bg-neutral-50/50 flex gap-4 items-center"
+                    >
+                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=400&q=80"
+                          alt="Archetype 03"
+                          className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">LIMITED RUN</span>
+                        <h4 className="font-nike text-base font-bold uppercase text-black leading-tight group-hover/item:underline">
+                          ARCHETYPE 03 // BONE
+                        </h4>
+                        <p className="text-xs text-neutral-600 font-medium">$80 USD • Chalk Piqué Weave</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. 5-Panel Mega Menu */}
+              {activeMegaMenu === 'fivepanel' && (
+                <div className="grid grid-cols-12 gap-8 items-start">
+                  <div className="col-span-4 space-y-3">
+                    <span className="font-nike text-sm font-black tracking-tight uppercase text-black block">
+                      5-PANEL CAMP & TACTICAL
+                    </span>
+                    <p className="text-neutral-600 leading-relaxed text-xs font-normal">
+                      Low-profile technical silhouettes crafted from genuine 500D ballistic Cordura® nylon, flexible polymer visors, and magnetic Fidlock® tension systems.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => { goToShop('CAMP_CAP'); setActiveMegaMenu(null); }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-black text-white text-xs font-bold uppercase rounded-full hover:bg-neutral-800 transition-colors cursor-pointer"
+                      >
+                        <span>SHOP ALL 5-PANEL CAPS</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="col-span-8 grid grid-cols-2 gap-6">
+                    <div
+                      onClick={() => { goToProduct('rlx-04-cipher-camp'); setActiveMegaMenu(null); }}
+                      className="group/item cursor-pointer p-4 rounded-2xl border border-neutral-200 hover:border-black transition-all bg-neutral-50/50 flex gap-4 items-center"
+                    >
+                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1534215754734-18e55d13e346?auto=format&fit=crop&w=400&q=80"
+                          alt="Cipher 04"
+                          className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">BALLISTIC SPEC</span>
+                        <h4 className="font-nike text-base font-bold uppercase text-black leading-tight group-hover/item:underline">
+                          CIPHER 04 // CORDURA
+                        </h4>
+                        <p className="text-xs text-neutral-600 font-medium">$95 USD • Fidlock® Magnetic Closure</p>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => { goToShop('CAMP_CAP'); setActiveMegaMenu(null); }}
+                      className="group/item cursor-pointer p-4 rounded-2xl border border-neutral-200 hover:border-black transition-all bg-neutral-50/50 flex gap-4 items-center"
+                    >
+                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=400&q=80"
+                          alt="Modular Camp"
+                          className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">TACTICAL FIELD</span>
+                        <h4 className="font-nike text-base font-bold uppercase text-black leading-tight group-hover/item:underline">
+                          ALL CAMP SILHOUETTES
+                        </h4>
+                        <p className="text-xs text-neutral-600 font-medium">Explore 5-Panel Cordura & Ripstop</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
         )}
       </header>
+ 
+      {/* NIKE-STYLE MEGA MENU DIMMING BACKDROP OVERLAY */}
+      {activeMegaMenu && (
+        <div
+          className="fixed inset-0 top-16 sm:top-20 bg-black/30 backdrop-blur-[1px] z-30 transition-opacity animate-fadeIn"
+          onMouseEnter={handleMouseLeaveNav}
+          onClick={() => setActiveMegaMenu(null)}
+        />
+      )}
 
-      {/* 3. NIKE ANNOUNCEMENT SUB-HEADER (WITH DISMISS BUTTON) */}
+      {/* ANNOUNCEMENT SUB-HEADER (Dismissible) */}
       {!isAnnouncementDismissed && announcementConfig?.active && (
         <div className="bg-[#f5f5f5] py-2 px-6 sm:px-10 text-center text-[12px] font-sans font-medium text-neutral-800 border-b border-neutral-200 relative flex items-center justify-center animate-fadeIn select-none">
           <div className="max-w-4xl mx-auto pr-6 flex items-center justify-center gap-2">
@@ -670,7 +722,7 @@ export const Navbar: React.FC = () => {
                   onClick={() => openAuthModal('signin')}
                   className="underline font-bold hover:text-black cursor-pointer ml-1"
                 >
-                  {announcementConfig.linkText || 'Join or Sign In'}
+                  {announcementConfig.linkText || 'Sign In / Join'}
                 </button>
               </p>
             )}
@@ -687,7 +739,7 @@ export const Navbar: React.FC = () => {
         </div>
       )}
 
-      {/* 4. MOBILE DRAWER */}
+      {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col bg-white animate-fadeIn select-none font-sans">
           <div className="flex items-center justify-between p-6 border-b border-neutral-200">
@@ -696,7 +748,7 @@ export const Navbar: React.FC = () => {
             </span>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 text-black hover:bg-neutral-100 rounded-full"
+              className="p-2 text-black hover:bg-neutral-100 rounded-full cursor-pointer"
             >
               <X size={24} />
             </button>
@@ -723,75 +775,107 @@ export const Navbar: React.FC = () => {
               </div>
             </form>
 
+            {/* Mobile Direct Category Navigation */}
             <div className="space-y-3">
               <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-widest block">
-                FLAGSHIP COLLECTIONS
+                HEADWEAR COLLECTIONS
               </span>
 
               <button
-                onClick={() => { goToHome(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-2xl font-nike font-black uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-black hover:opacity-75"
-              >
-                <span>NEW & FEATURED</span>
-                <ArrowRight size={18} />
-              </button>
-
-              <button
                 onClick={() => { goToShop(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-2xl font-nike font-black uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-black hover:opacity-75"
+                className="w-full flex items-center justify-between text-2xl font-nike font-black uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-black hover:opacity-75 cursor-pointer"
               >
                 <span>SHOP ALL CAPS</span>
                 <ArrowRight size={18} />
               </button>
 
               <button
-                onClick={() => { goToShop('STRUCTURED'); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black"
+                onClick={() => { goToShop('TECHNICAL'); setMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black cursor-pointer"
               >
-                <span>MEN'S 6-PANEL</span>
+                <span>GORE-TEX® TECHNICAL</span>
                 <ArrowRight size={16} />
               </button>
 
               <button
-                onClick={() => { goToShop('TECHNICAL'); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black"
+                onClick={() => { goToShop('STRUCTURED'); setMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black cursor-pointer"
               >
-                <span>GORE-TEX® SERIES</span>
+                <span>6-PANEL MONOLITH</span>
+                <ArrowRight size={16} />
+              </button>
+
+              <button
+                onClick={() => { goToShop('CAMP_CAP'); setMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black cursor-pointer"
+              >
+                <span>5-PANEL CAMP</span>
+                <ArrowRight size={16} />
+              </button>
+
+              <button
+                onClick={() => { goToShop('RUNNER'); setMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black cursor-pointer"
+              >
+                <span>RUNNER SPEED</span>
                 <ArrowRight size={16} />
               </button>
 
               <button
                 onClick={() => { goToLookbook(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black"
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black cursor-pointer"
               >
                 <span>LOOKBOOK EDITORIAL</span>
                 <Camera size={16} />
               </button>
+
+              <button
+                onClick={() => { goToTracking(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black cursor-pointer"
+              >
+                <span>TRACK PACKAGE TELEMETRY</span>
+                <ArrowRight size={16} />
+              </button>
+
+              <button
+                onClick={() => { goToSupport(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center justify-between text-xl font-nike font-bold uppercase tracking-tight py-2 text-left border-b border-neutral-100 text-neutral-800 hover:text-black cursor-pointer"
+              >
+                <span>CLIENT SUPPORT CONCIERGE</span>
+                <ArrowRight size={16} />
+              </button>
             </div>
 
-            {/* Currency selector on mobile */}
+            {/* Mobile Currency Selector (Serial 3 rows) */}
             <div className="pt-2">
               <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-widest block mb-2">
-                ACTIVE CURRENCY
+                ACTIVE STORE CURRENCY
               </span>
-              <div className="grid grid-cols-3 gap-2">
-                {(['USD', 'GBP', 'EUR'] as const).map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setCurrency(c)}
-                    className={`py-2 text-xs font-bold rounded-xl border text-center transition-all ${
-                      currency === c
-                        ? 'border-black bg-black text-white'
-                        : 'border-neutral-200 bg-neutral-50 text-neutral-800'
-                    }`}
-                  >
-                    {c === 'USD' ? '$ USD' : c === 'GBP' ? '£ GBP' : '€ EUR'}
-                  </button>
-                ))}
+              <div className="space-y-2">
+                {currencyItems.map((item) => {
+                  const isSelected = currency === item.code;
+                  return (
+                    <button
+                      key={item.code}
+                      onClick={() => setCurrency(item.code)}
+                      className={`w-full py-2.5 px-4 text-xs font-bold rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-black bg-black text-white'
+                          : 'border-neutral-200 bg-neutral-50 text-neutral-800'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span className="text-base">{item.flag}</span>
+                        <span>{item.symbol} {item.code} — {item.name}</span>
+                      </span>
+                      {isSelected && <Check size={16} className="text-white" />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Account on Mobile */}
+            {/* Member Account in Mobile Drawer */}
             <div className="pt-2 space-y-3">
               <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-widest block">
                 MEMBER ACCOUNT
@@ -813,20 +897,20 @@ export const Navbar: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <button
                       onClick={() => { goToDashboard('orders'); setMobileMenuOpen(false); }}
-                      className="py-2 px-3 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-center"
+                      className="py-2 px-3 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-center cursor-pointer"
                     >
                       My Orders
                     </button>
                     <button
                       onClick={() => { goToDashboard('wishlist'); setMobileMenuOpen(false); }}
-                      className="py-2 px-3 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-center"
+                      className="py-2 px-3 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-center cursor-pointer"
                     >
                       Favorites ({wishlist.length})
                     </button>
                   </div>
                   <button
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="w-full py-2 text-xs text-neutral-600 hover:text-black font-semibold text-center border-t border-neutral-200 pt-2"
+                    className="w-full py-2 text-xs text-neutral-600 hover:text-black font-semibold text-center border-t border-neutral-200 pt-2 cursor-pointer"
                   >
                     Sign Out
                   </button>
@@ -835,13 +919,13 @@ export const Navbar: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => { openAuthModal('signin'); setMobileMenuOpen(false); }}
-                    className="py-3 bg-white border-2 border-black text-black font-bold uppercase text-xs rounded-full text-center"
+                    className="py-3 bg-white border-2 border-black text-black font-bold uppercase text-xs rounded-full text-center cursor-pointer"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => { openAuthModal('signup'); setMobileMenuOpen(false); }}
-                    className="py-3 bg-black text-white font-bold uppercase text-xs rounded-full text-center"
+                    className="py-3 bg-black text-white font-bold uppercase text-xs rounded-full text-center cursor-pointer"
                   >
                     Join Us
                   </button>
@@ -849,14 +933,14 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Admin Console Access */}
+            {/* Operations Portal Link */}
             <div className="pt-2">
               <button
                 onClick={() => { goToAdmin(); setMobileMenuOpen(false); }}
-                className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-2xl text-xs font-bold text-black flex items-center justify-center gap-2"
+                className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-2xl text-xs font-bold text-black flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Operations Admin Console</span>
+                <span>Operations Admin Portal</span>
               </button>
             </div>
 

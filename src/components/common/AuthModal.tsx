@@ -1,30 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { X, Lock, Mail, User as UserIcon, Eye, EyeOff, Check, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
-
-interface QuickGoogleAccount {
-  name: string;
-  email: string;
-  avatar: string;
-}
-
-const QUICK_GOOGLE_ACCOUNTS: QuickGoogleAccount[] = [
-  {
-    name: 'Alex Morgan',
-    email: 'alex.morgan.tech@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-  },
-  {
-    name: 'Elena Rostova',
-    email: 'elena.rostova@design.de',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80',
-  },
-  {
-    name: 'Kenji Takahashi',
-    email: 'kenji.t@tokyo-lab.jp',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-  },
-];
+import { X, Lock, Mail, User as UserIcon, Eye, EyeOff, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -35,6 +11,7 @@ export const AuthModal: React.FC = () => {
     login,
     signup,
     loginWithGoogle,
+    sendPasswordReset,
   } = useAuth();
 
   // Form states
@@ -49,48 +26,21 @@ export const AuthModal: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [showGoogleChooser, setShowGoogleChooser] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
 
   if (!isAuthModalOpen) return null;
 
   // Handle direct Google Sign In
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
+    setSuccessMsg('');
     setGoogleLoading(true);
     try {
       const res = await loginWithGoogle();
       if (!res.success) {
-        // Reveal quick Google chooser if popup was closed or domain not whitelisted
-        setShowGoogleChooser(true);
+        setErrorMsg(res.error || 'Unable to connect to Google Account. Please try again.');
       }
-    } catch {
-      setShowGoogleChooser(true);
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleSelectGoogleAccount = async (account: QuickGoogleAccount) => {
-    setGoogleLoading(true);
-    try {
-      await loginWithGoogle(account);
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleCustomGoogleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customGoogleEmail.trim()) return;
-    setGoogleLoading(true);
-    try {
-      const parsedName = customGoogleEmail.split('@')[0].replace(/[^a-zA-Z]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-      await loginWithGoogle({
-        name: parsedName || 'Google User',
-        email: customGoogleEmail.trim().toLowerCase(),
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-      });
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Google Sign-In encountered an error.');
     } finally {
       setGoogleLoading(false);
     }
@@ -99,6 +49,7 @@ export const AuthModal: React.FC = () => {
   const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
     setIsLoading(true);
     try {
       const result = await login(email, password);
@@ -113,6 +64,7 @@ export const AuthModal: React.FC = () => {
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
 
     if (!name.trim()) {
       setErrorMsg('Please enter your full name.');
@@ -146,26 +98,29 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
     if (!email.trim()) {
-      setErrorMsg('Please enter your registered email.');
+      setErrorMsg('Please enter your registered email address.');
       return;
     }
-    setSuccessMsg(`A password reset link has been dispatched to ${email}. Check your inbox.`);
-    setTimeout(() => {
-      setSuccessMsg('');
-      openAuthModal('signin');
-    }, 3500);
-  };
 
-  const handleQuickFill = (role: 'marcus' | 'elena') => {
-    if (role === 'marcus') {
-      setEmail('marcus.vance@studio.com');
-      setPassword('password123');
-    } else {
-      setEmail('elena.rostova@design.de');
-      setPassword('password123');
+    setIsLoading(true);
+    try {
+      const result = await sendPasswordReset(email);
+      if (result.success) {
+        setSuccessMsg(`A password reset link has been dispatched to ${email}. Check your inbox.`);
+        setTimeout(() => {
+          openAuthModal('signin');
+        }, 4000);
+      } else {
+        setErrorMsg(result.error || 'Unable to dispatch reset email. Please verify the address.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -186,7 +141,7 @@ export const AuthModal: React.FC = () => {
 
           <button
             onClick={closeAuthModal}
-            className="p-1.5 text-neutral-400 hover:text-black rounded-full hover:bg-neutral-100 transition-colors"
+            className="p-1.5 text-neutral-400 hover:text-black rounded-full hover:bg-neutral-100 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X size={20} />
@@ -199,9 +154,10 @@ export const AuthModal: React.FC = () => {
             type="button"
             onClick={() => {
               setErrorMsg('');
+              setSuccessMsg('');
               openAuthModal('signin');
             }}
-            className={`flex-1 py-3 font-bold uppercase tracking-wider transition-all border-b-2 ${
+            className={`flex-1 py-3 font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               authModalMode === 'signin'
                 ? 'border-black text-black bg-white shadow-2xs font-extrabold'
                 : 'border-transparent text-neutral-500 hover:text-black'
@@ -213,9 +169,10 @@ export const AuthModal: React.FC = () => {
             type="button"
             onClick={() => {
               setErrorMsg('');
+              setSuccessMsg('');
               openAuthModal('signup');
             }}
-            className={`flex-1 py-3 font-bold uppercase tracking-wider transition-all border-b-2 ${
+            className={`flex-1 py-3 font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               authModalMode === 'signup'
                 ? 'border-black text-black bg-white shadow-2xs font-extrabold'
                 : 'border-transparent text-neutral-500 hover:text-black'
@@ -246,14 +203,15 @@ export const AuthModal: React.FC = () => {
             </p>
           </div>
 
-          {/* "CONTINUE WITH GOOGLE" BUTTON */}
+          {/* SOCIAL AUTH BUTTONS: GOOGLE */}
           {authModalMode !== 'forgot' && (
             <div className="space-y-3">
+              {/* CONTINUE WITH GOOGLE BUTTON */}
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                disabled={googleLoading}
-                className="w-full py-3 px-4 bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-neutral-400 rounded-full font-sans text-xs font-bold text-neutral-800 uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-xs active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                disabled={googleLoading || isLoading}
+                className="w-full py-3.5 px-4 bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-neutral-400 rounded-full font-sans text-xs font-bold text-neutral-800 uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-xs active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {googleLoading ? (
                   <Loader2 size={18} className="animate-spin text-neutral-600" />
@@ -279,62 +237,6 @@ export const AuthModal: React.FC = () => {
                 )}
                 <span>{googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
               </button>
-
-              {/* In-Modal Quick Google Profile Chooser */}
-              {showGoogleChooser && (
-                <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2.5 animate-fadeIn">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-600">
-                      Choose Google Account
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowGoogleChooser(false)}
-                      className="text-[10px] text-neutral-400 hover:text-black"
-                    >
-                      Hide
-                    </button>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {QUICK_GOOGLE_ACCOUNTS.map((acc) => (
-                      <button
-                        key={acc.email}
-                        type="button"
-                        onClick={() => handleSelectGoogleAccount(acc)}
-                        className="w-full p-2 bg-white hover:bg-neutral-100 rounded-xl border border-neutral-200 flex items-center justify-between text-left transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <img src={acc.avatar} alt={acc.name} className="w-7 h-7 rounded-full object-cover" />
-                          <div>
-                            <p className="text-xs font-bold text-black leading-tight">{acc.name}</p>
-                            <p className="text-[10px] text-neutral-500">{acc.email}</p>
-                          </div>
-                        </div>
-                        <Check size={14} className="text-neutral-400" />
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Or Custom Google Email */}
-                  <form onSubmit={handleCustomGoogleSubmit} className="pt-1 flex gap-1.5">
-                    <input
-                      type="email"
-                      required
-                      placeholder="Or enter your @gmail.com..."
-                      value={customGoogleEmail}
-                      onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                      className="flex-1 bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black"
-                    />
-                    <button
-                      type="submit"
-                      className="px-3 py-1.5 bg-black text-white rounded-lg text-[11px] font-bold uppercase tracking-wider hover:bg-neutral-800 cursor-pointer"
-                    >
-                      Sign In
-                    </button>
-                  </form>
-                </div>
-              )}
 
               <div className="relative flex items-center justify-center py-1">
                 <div className="border-t border-neutral-200 w-full"></div>
@@ -385,7 +287,11 @@ export const AuthModal: React.FC = () => {
                   </label>
                   <button
                     type="button"
-                    onClick={() => openAuthModal('forgot')}
+                    onClick={() => {
+                      setErrorMsg('');
+                      setSuccessMsg('');
+                      openAuthModal('forgot');
+                    }}
                     className="text-[11px] text-neutral-500 hover:text-black underline cursor-pointer"
                   >
                     Forgot password?
@@ -436,26 +342,6 @@ export const AuthModal: React.FC = () => {
                   </>
                 )}
               </button>
-
-              {/* Quick Fill Demo Helper */}
-              <div className="pt-2 text-center text-[11px] text-neutral-400">
-                <span>Quick Fill Demo: </span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('marcus')}
-                  className="font-bold text-black underline hover:text-neutral-700 ml-1 cursor-pointer"
-                >
-                  Marcus Vance
-                </button>
-                <span className="mx-1.5">•</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('elena')}
-                  className="font-bold text-black underline hover:text-neutral-700 cursor-pointer"
-                >
-                  Elena Rostova
-                </button>
-              </div>
             </form>
           )}
 
@@ -592,16 +478,27 @@ export const AuthModal: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.99] cursor-pointer"
+                disabled={isLoading}
+                className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
-                <span>SEND RESET LINK</span>
-                <ArrowRight size={16} />
+                {isLoading ? (
+                  <span>Dispatching Link...</span>
+                ) : (
+                  <>
+                    <span>SEND RESET LINK</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
               </button>
 
               <div className="text-center pt-2">
                 <button
                   type="button"
-                  onClick={() => openAuthModal('signin')}
+                  onClick={() => {
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                    openAuthModal('signin');
+                  }}
                   className="text-xs text-neutral-600 hover:text-black font-semibold underline cursor-pointer"
                 >
                   Back to Sign In

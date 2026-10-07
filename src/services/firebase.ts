@@ -47,6 +47,7 @@ import {
   updateProfile as updateFirebaseProfile,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   User as FirebaseUser,
 } from "firebase/auth";
 
@@ -70,6 +71,10 @@ export async function signupWithFirebaseEmail(name: string, email: string, pass:
     }
   }
   return result.user;
+}
+
+export async function resetFirebasePassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
 }
 
 export async function logoutFirebase(): Promise<void> {

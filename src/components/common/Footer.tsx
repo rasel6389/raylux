@@ -5,7 +5,7 @@ import { useCurrency } from '../../context/CurrencyContext';
 import { MapPin, ArrowUpRight, Globe } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { goToShop, goToDashboard, goToAdmin, goToLookbook } = useNavigation();
+  const { goToShop, goToDashboard, goToAdmin, goToLookbook, goToTracking, goToSupport } = useNavigation();
   const { openAuthModal } = useAuth();
   const { currency, openCurrencyModal } = useCurrency();
 
@@ -74,10 +74,18 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-neutral-400 font-medium">
               <li>
                 <button
-                  onClick={() => goToDashboard('orders')}
-                  className="hover:text-white transition-colors text-left"
+                  onClick={() => goToTracking()}
+                  className="hover:text-white transition-colors text-left cursor-pointer"
                 >
                   Order Status & Tracking
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => goToSupport()}
+                  className="hover:text-white transition-colors text-left cursor-pointer"
+                >
+                  Client Support Tickets
                 </button>
               </li>
               <li>

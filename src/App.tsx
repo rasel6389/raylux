@@ -18,6 +18,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { LookbookPage } from './pages/LookbookPage';
 import { AdminPage } from './pages/AdminPage';
+import { SupportPage } from './pages/SupportPage';
+import { TrackOrderPage } from './pages/TrackOrderPage';
 
 const AppContent: React.FC = () => {
   const { currentPage } = useNavigation();
@@ -51,6 +53,8 @@ const AppContent: React.FC = () => {
         {currentPage === 'pdp' && <ProductDetailPage />}
         {currentPage === 'dashboard' && <DashboardPage />}
         {currentPage === 'lookbook' && <LookbookPage />}
+        {currentPage === 'support' && <SupportPage />}
+        {currentPage === 'tracking' && <TrackOrderPage />}
       </main>
       <CartDrawer />
       <Footer />

@@ -7,7 +7,7 @@ import { useNavigation } from '../context/NavigationContext';
 import { SlidersHorizontal, X, ChevronDown, Search } from 'lucide-react';
 
 export const ShopPage: React.FC = () => {
-  const { shopCategoryFilter, searchQuery, setSearchQuery } = useNavigation();
+  const { shopCategoryFilter, setShopCategoryFilter, searchQuery, setSearchQuery } = useNavigation();
   const { products } = useStore();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -22,15 +22,62 @@ export const ShopPage: React.FC = () => {
 
   const [filters, setFilters] = useState<FilterState>(initialFilters);
 
-  // Sync external category navigation
+  // Sync external category navigation (from Navbar, hero buttons, search suggestions, URL)
   useEffect(() => {
-    if (shopCategoryFilter) {
-      setFilters((prev) => ({ ...prev, category: shopCategoryFilter }));
-    }
+    const targetCat = shopCategoryFilter || 'ALL';
+    setFilters((prev) => {
+      if (prev.category === targetCat) return prev;
+      return {
+        ...prev,
+        category: targetCat,
+      };
+    });
   }, [shopCategoryFilter]);
+
+  const handleFilterChange = (newFilters: FilterState) => {
+    if (newFilters.category !== filters.category) {
+      setShopCategoryFilter(newFilters.category === 'ALL' ? null : newFilters.category);
+    }
+    setFilters(newFilters);
+  };
+
+  const getCategoryTitle = (cat: string) => {
+    switch (cat) {
+      case 'TECHNICAL':
+        return 'GORE-TEX® TECHNICAL CAPS';
+      case 'STRUCTURED':
+        return 'STRUCTURED 6-PANEL CAPS';
+      case 'CAMP_CAP':
+        return '5-PANEL CAMP CAPS';
+      case 'RUNNER':
+        return 'AERORUNNER SPEED CAPS';
+      case 'COLLABORATION':
+        return 'COLLABORATIONS';
+      default:
+        return 'ALL HEADWEAR CAPS';
+    }
+  };
+
+  const getCategoryLabel = (cat: string) => {
+    switch (cat) {
+      case 'TECHNICAL':
+        return 'GORE-TEX® Technical';
+      case 'STRUCTURED':
+        return 'Structured 6-Panel';
+      case 'CAMP_CAP':
+        return '5-Panel Camp';
+      case 'RUNNER':
+        return 'Aerorunner';
+      case 'COLLABORATION':
+        return 'Collaborations';
+      default:
+        return 'All Caps';
+    }
+  };
 
   const handleResetFilters = () => {
     setSearchQuery('');
+    setShopCategoryFilter(null);
     setFilters({
       category: 'ALL',
       materials: [],
@@ -96,12 +143,12 @@ export const ShopPage: React.FC = () => {
             {filters.category !== 'ALL' && (
               <>
                 <span>/</span>
-                <span className="text-black font-bold">{filters.category}</span>
+                <span className="text-black font-bold">{getCategoryLabel(filters.category)}</span>
               </>
             )}
           </div>
           <h1 className="font-nike text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-black">
-            {filters.category === 'ALL' ? 'ALL HEADWEAR CAPS' : `${filters.category} SERIES`} ({filteredProducts.length})
+            {getCategoryTitle(filters.category)} ({filteredProducts.length})
           </h1>
           <p className="font-sans text-sm text-neutral-600 max-w-2xl">
             Explore premium technical caps engineered for athletic performance and structural urban aesthetics.
@@ -174,7 +221,7 @@ export const ShopPage: React.FC = () => {
           <div className="hidden lg:block lg:col-span-3 sticky top-28 bg-white pr-4">
             <FilterSidebar
               filters={filters}
-              onFilterChange={setFilters}
+              onFilterChange={handleFilterChange}
               onResetFilters={handleResetFilters}
               totalMatches={filteredProducts.length}
             />
@@ -236,7 +283,7 @@ export const ShopPage: React.FC = () => {
             <div className="py-6 flex-1">
               <FilterSidebar
                 filters={filters}
-                onFilterChange={setFilters}
+                onFilterChange={handleFilterChange}
                 onResetFilters={handleResetFilters}
                 totalMatches={filteredProducts.length}
               />

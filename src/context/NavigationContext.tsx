@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-export type PageRoute = 'home' | 'shop' | 'pdp' | 'dashboard' | 'checkout' | 'lookbook' | 'admin';
+export type PageRoute = 'home' | 'shop' | 'pdp' | 'dashboard' | 'checkout' | 'lookbook' | 'admin' | 'support' | 'tracking';
 export type DashboardTab = 'user' | 'wishlist' | 'addresses' | 'payments' | 'settings' | 'orders' | 'tickets';
 export type AdminTab = 'overview' | 'orders' | 'inventory' | 'hero_cms' | 'customers' | 'dispatches' | 'discounts' | 'support' | 'ai_agent' | 'settings';
 
@@ -11,18 +11,25 @@ interface NavigationContextType {
   selectedProductId: string;
   dashboardTab: DashboardTab;
   shopCategoryFilter: string | null;
+  setShopCategoryFilter: (cat: string | null) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  trackingOrderNumber: string;
+  setTrackingOrderNumber: (num: string) => void;
+  supportTicketId: string | null;
+  setSupportTicketId: (id: string | null) => void;
   isAdminLoggedIn: boolean;
   loginAdmin: (pass: string) => boolean;
   logoutAdmin: () => void;
-  navigateTo: (page: PageRoute, params?: { productId?: string; tab?: DashboardTab; adminTab?: AdminTab; category?: string; query?: string }) => void;
+  navigateTo: (page: PageRoute, params?: { productId?: string; tab?: DashboardTab; adminTab?: AdminTab; category?: string; query?: string; orderNumber?: string; ticketId?: string }) => void;
   goToProduct: (productId: string) => void;
   goToShop: (category?: string, query?: string) => void;
   goToDashboard: (tab?: DashboardTab) => void;
   goToCheckout: () => void;
   goToLookbook: () => void;
   goToAdmin: (tab?: AdminTab | React.MouseEvent) => void;
+  goToSupport: (ticketId?: string) => void;
+  goToTracking: (orderNumber?: string) => void;
   goToHome: () => void;
 }
 
@@ -94,6 +101,10 @@ const parseInitialRoute = (): {
       }
     } else if (path === '/lookbook' || hash === '#lookbook' || hash.startsWith('#/lookbook')) {
       page = 'lookbook';
+    } else if (path === '/support' || hash === '#support' || hash.startsWith('#/support')) {
+      page = 'support';
+    } else if (path === '/track' || path === '/tracking' || hash === '#track' || hash === '#tracking' || hash.startsWith('#/track') || hash.startsWith('#/tracking')) {
+      page = 'tracking';
     } else if (path.startsWith('/product/') || path.startsWith('/p/')) {
       page = 'pdp';
       const segs = path.split('/');
@@ -116,6 +127,20 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [dashboardTab, setDashboardTab] = useState<DashboardTab>(initial.dashboardTab);
   const [shopCategoryFilter, setShopCategoryFilter] = useState<string | null>(initial.category);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [trackingOrderNumber, setTrackingOrderNumber] = useState<string>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('order') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [supportTicketId, setSupportTicketId] = useState<string | null>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('ticket') || null;
+    } catch {
+      return null;
+    }
+  });
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
     try {
@@ -128,7 +153,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // URL synchronization using HTML5 History API
   const syncBrowserUrl = useCallback((
     page: PageRoute,
-    params?: { adminTab?: AdminTab; dashboardTab?: DashboardTab; productId?: string; category?: string | null }
+    params?: { adminTab?: AdminTab; dashboardTab?: DashboardTab; productId?: string; category?: string | null; orderNumber?: string; ticketId?: string }
   ) => {
     try {
       let targetPath = '/';
@@ -144,6 +169,12 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         targetPath = '/checkout';
       } else if (page === 'lookbook') {
         targetPath = '/lookbook';
+      } else if (page === 'support') {
+        const tId = params?.ticketId || supportTicketId;
+        targetPath = tId ? `/support?ticket=${encodeURIComponent(tId)}` : '/support';
+      } else if (page === 'tracking') {
+        const oNum = params?.orderNumber || trackingOrderNumber;
+        targetPath = oNum ? `/track?order=${encodeURIComponent(oNum)}` : '/track';
       } else if (page === 'pdp') {
         const pid = params?.productId || selectedProductId;
         targetPath = `/product/${pid}`;
@@ -156,7 +187,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch {
       // ignore
     }
-  }, [adminTab, dashboardTab, selectedProductId]);
+  }, [adminTab, dashboardTab, selectedProductId, supportTicketId, trackingOrderNumber]);
 
   // Handle browser Back & Forward button events
   useEffect(() => {
@@ -215,19 +246,23 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const navigateTo = (
     page: PageRoute,
-    params?: { productId?: string; tab?: DashboardTab; adminTab?: AdminTab; category?: string; query?: string }
+    params?: { productId?: string; tab?: DashboardTab; adminTab?: AdminTab; category?: string; query?: string; orderNumber?: string; ticketId?: string }
   ) => {
     if (params?.productId) setSelectedProductId(params.productId);
     if (params?.tab) setDashboardTab(params.tab);
     if (params?.adminTab) setAdminTabState(params.adminTab);
     if (params?.category !== undefined) setShopCategoryFilter(params.category);
     if (params?.query !== undefined) setSearchQuery(params.query);
+    if (params?.orderNumber !== undefined) setTrackingOrderNumber(params.orderNumber);
+    if (params?.ticketId !== undefined) setSupportTicketId(params.ticketId);
     setCurrentPage(page);
     syncBrowserUrl(page, {
       adminTab: params?.adminTab,
       dashboardTab: params?.tab,
       productId: params?.productId,
       category: params?.category,
+      orderNumber: params?.orderNumber,
+      ticketId: params?.ticketId,
     });
   };
 
@@ -237,11 +272,23 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     syncBrowserUrl('pdp', { productId });
   };
 
+  const updateShopCategoryFilter = (cat: string | null) => {
+    setShopCategoryFilter(cat);
+    if (currentPage === 'shop') {
+      syncBrowserUrl('shop', { category: cat });
+    }
+  };
+
   const goToShop = (category?: string, query?: string) => {
     setShopCategoryFilter(category || null);
-    if (query !== undefined) setSearchQuery(query);
+    setSearchQuery(query !== undefined ? query : '');
     setCurrentPage('shop');
     syncBrowserUrl('shop', { category: category || null });
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // ignore
+    }
   };
 
   const goToDashboard = (tab: DashboardTab = 'user') => {
@@ -267,6 +314,28 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     syncBrowserUrl('admin', { adminTab: resolvedTab });
   };
 
+  const goToSupport = (ticketId?: string) => {
+    if (ticketId !== undefined) setSupportTicketId(ticketId || null);
+    setCurrentPage('support');
+    syncBrowserUrl('support', { ticketId });
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // ignore
+    }
+  };
+
+  const goToTracking = (orderNumber?: string) => {
+    if (orderNumber !== undefined) setTrackingOrderNumber(orderNumber);
+    setCurrentPage('tracking');
+    syncBrowserUrl('tracking', { orderNumber });
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // ignore
+    }
+  };
+
   const goToHome = () => {
     setCurrentPage('home');
     syncBrowserUrl('home');
@@ -281,8 +350,13 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         selectedProductId,
         dashboardTab,
         shopCategoryFilter,
+        setShopCategoryFilter: updateShopCategoryFilter,
         searchQuery,
         setSearchQuery,
+        trackingOrderNumber,
+        setTrackingOrderNumber,
+        supportTicketId,
+        setSupportTicketId,
         isAdminLoggedIn,
         loginAdmin,
         logoutAdmin,
@@ -293,6 +367,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         goToCheckout,
         goToLookbook,
         goToAdmin,
+        goToSupport,
+        goToTracking,
         goToHome,
       }}
     >

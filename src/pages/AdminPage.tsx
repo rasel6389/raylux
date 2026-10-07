@@ -238,12 +238,13 @@ export const AdminPage: React.FC = () => {
   }, []);
 
   // Contexts for Tickets & Currency
-  const { tickets, updateTicketStatus, addReply } = useTickets();
+  const { tickets, updateTicketStatus, addReply, deleteTicket } = useTickets();
   const { exchangeRates, setExchangeRates } = useCurrency();
 
   // Support Desk state
   const [supportFilter, setSupportFilter] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [ticketSearchQuery, setTicketSearchQuery] = useState('');
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [adminReplyText, setAdminReplyText] = useState('');
 
   // AI Agent Config state
@@ -391,9 +392,25 @@ export const AdminPage: React.FC = () => {
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
       if (supportFilter !== 'ALL' && t.status !== supportFilter) return false;
+      if (ticketSearchQuery.trim()) {
+        const q = ticketSearchQuery.toLowerCase().trim();
+        const matchNum = (t.ticketNumber || t.id).toLowerCase().includes(q);
+        const matchName = t.customerName.toLowerCase().includes(q);
+        const matchEmail = t.customerEmail.toLowerCase().includes(q);
+        const matchSubj = t.subject.toLowerCase().includes(q);
+        const matchOrder = t.orderNumber?.toLowerCase().includes(q);
+        if (!matchNum && !matchName && !matchEmail && !matchSubj && !matchOrder) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [tickets, supportFilter]);
+  }, [tickets, supportFilter, ticketSearchQuery]);
+
+  const selectedTicket = useMemo(() => {
+    if (!selectedTicketId) return filteredTickets[0] || null;
+    return tickets.find((t) => t.id === selectedTicketId) || filteredTickets[0] || null;
+  }, [tickets, selectedTicketId, filteredTickets]);
 
   const openTicketsCount = useMemo(() => {
     return tickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
@@ -3752,39 +3769,69 @@ export const AdminPage: React.FC = () => {
                 
                 {/* Tickets List */}
                 <div className="bg-white border border-neutral-200 rounded-2xl shadow-xs overflow-hidden">
-                  <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-                    <h3 className="text-xs font-bold text-black uppercase tracking-wider">Ticket Queue</h3>
+                  <div className="p-3.5 border-b border-neutral-200 bg-neutral-50/70 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-black uppercase tracking-wider">Ticket Queue</h3>
+                      <span className="text-[10px] text-neutral-400 font-bold">{filteredTickets.length} Found</span>
+                    </div>
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search ticket #, client, email, order..."
+                        value={ticketSearchQuery}
+                        onChange={(e) => setTicketSearchQuery(e.target.value)}
+                        className="w-full bg-white border border-neutral-200 rounded-xl pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-black font-medium"
+                      />
+                    </div>
                   </div>
+
                   <div className="divide-y divide-neutral-100 max-h-[600px] overflow-y-auto">
-                    {filteredTickets.map((t) => {
-                      const isSelected = selectedTicket?.id === t.id;
-                      const lastMessage = t.messages?.[t.messages.length - 1]?.message || 'No messages';
-                      return (
-                        <div
-                          key={t.id}
-                          onClick={() => setSelectedTicket(t)}
-                          className={`p-4 cursor-pointer transition-colors ${
-                            isSelected ? 'bg-neutral-100 border-l-4 border-black' : 'hover:bg-neutral-50'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-[10px] text-neutral-400 font-bold">{t.ticketNumber || t.id}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              t.status === 'RESOLVED'
-                                ? 'bg-neutral-200 text-neutral-700'
-                                : t.status === 'IN_PROGRESS'
-                                ? 'bg-black text-white'
-                                : 'bg-neutral-100 text-black border border-neutral-300'
-                            }`}>
-                              {t.status}
-                            </span>
+                    {filteredTickets.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-neutral-400">
+                        No support tickets match current filter.
+                      </div>
+                    ) : (
+                      filteredTickets.map((t) => {
+                        const isSelected = selectedTicket?.id === t.id;
+                        const lastMessage = t.messages?.[t.messages.length - 1]?.message || 'No messages';
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => setSelectedTicketId(t.id)}
+                            className={`p-4 cursor-pointer transition-colors ${
+                              isSelected ? 'bg-neutral-100 border-l-4 border-black' : 'hover:bg-neutral-50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-mono text-[10px] text-neutral-400 font-bold">{t.ticketNumber || t.id}</span>
+                              <div className="flex items-center gap-1">
+                                {t.priority === 'URGENT' || t.priority === 'HIGH' ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-red-100 text-red-700">
+                                    {t.priority}
+                                  </span>
+                                ) : null}
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                  t.status === 'RESOLVED'
+                                    ? 'bg-neutral-200 text-neutral-700'
+                                    : t.status === 'IN_PROGRESS'
+                                    ? 'bg-black text-white'
+                                    : 'bg-amber-100 text-amber-900 border border-amber-300'
+                                }`}>
+                                  {t.status}
+                                </span>
+                              </div>
+                            </div>
+                            <h4 className="font-bold text-xs text-black mt-1 line-clamp-1">{t.subject}</h4>
+                            <p className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{lastMessage}</p>
+                            <div className="flex items-center justify-between text-[10px] text-neutral-400 mt-2 pt-1 border-t border-dashed border-neutral-200">
+                              <span>{t.customerName}</span>
+                              {t.orderNumber && <span className="font-mono text-black font-semibold">{t.orderNumber}</span>}
+                            </div>
                           </div>
-                          <h4 className="font-bold text-xs text-black mt-1">{t.subject}</h4>
-                          <p className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{lastMessage}</p>
-                          <span className="text-[10px] text-neutral-400 block mt-2">{t.customerName} • {t.createdAt}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
 
@@ -3792,35 +3839,69 @@ export const AdminPage: React.FC = () => {
                 <div className="lg:col-span-2 bg-white border border-neutral-200 rounded-2xl shadow-xs p-6 flex flex-col justify-between">
                   {selectedTicket ? (
                     <div className="space-y-6">
-                      <div className="flex items-start justify-between pb-4 border-b border-neutral-200">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-4 border-b border-neutral-200 gap-3">
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs text-neutral-400 font-bold">{selectedTicket.ticketNumber || selectedTicket.id}</span>
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-black text-white">
                               {selectedTicket.status}
                             </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-neutral-100 text-neutral-700">
+                              {selectedTicket.priority} Priority
+                            </span>
+                            <span className="text-[11px] text-neutral-500 font-medium">
+                              • {selectedTicket.category}
+                            </span>
                           </div>
-                          <h3 className="text-lg font-bold text-black mt-1">{selectedTicket.subject}</h3>
-                          <p className="text-xs text-neutral-500 mt-0.5">
-                            Client: <span className="font-bold text-black">{selectedTicket.customerName}</span> ({selectedTicket.customerEmail})
-                          </p>
+                          <h3 className="text-lg font-bold text-black mt-1.5">{selectedTicket.subject}</h3>
+                          <div className="text-xs text-neutral-500 mt-1 flex flex-wrap gap-2 items-center">
+                            <span>Client: <strong className="text-black">{selectedTicket.customerName}</strong></span>
+                            <span>•</span>
+                            <a href={`mailto:${selectedTicket.customerEmail}`} className="underline text-neutral-700 hover:text-black">
+                              {selectedTicket.customerEmail}
+                            </a>
+                            {selectedTicket.orderNumber && (
+                              <>
+                                <span>•</span>
+                                <span className="px-2 py-0.5 bg-neutral-100 rounded text-black font-mono font-bold">
+                                  Order: {selectedTicket.orderNumber}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Status Switcher */}
-                        <select
-                          value={selectedTicket.status}
-                          onChange={(e) => {
-                            const newSt = e.target.value as SupportTicket['status'];
-                            updateTicketStatus(selectedTicket.id, newSt);
-                            setSelectedTicket({ ...selectedTicket, status: newSt });
-                            showNotice(`Ticket status changed to ${newSt}`);
-                          }}
-                          className="px-3 py-1.5 bg-neutral-100 border border-neutral-300 rounded-full text-xs font-bold text-black focus:outline-none"
-                        >
-                          <option value="OPEN">Mark OPEN</option>
-                          <option value="IN_PROGRESS">Mark IN PROGRESS</option>
-                          <option value="RESOLVED">Mark RESOLVED</option>
-                        </select>
+                        {/* Status Switcher & Delete */}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={selectedTicket.status}
+                            onChange={(e) => {
+                              const newSt = e.target.value as SupportTicket['status'];
+                              updateTicketStatus(selectedTicket.id, newSt);
+                              showNotice(`Ticket status changed to ${newSt}`);
+                            }}
+                            className="px-3 py-1.5 bg-neutral-100 border border-neutral-300 rounded-full text-xs font-bold text-black focus:outline-none cursor-pointer"
+                          >
+                            <option value="OPEN">Mark OPEN</option>
+                            <option value="IN_PROGRESS">Mark IN PROGRESS</option>
+                            <option value="RESOLVED">Mark RESOLVED</option>
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Delete ticket ${selectedTicket.ticketNumber}?`)) {
+                                deleteTicket(selectedTicket.id);
+                                setSelectedTicketId(null);
+                                showNotice('Ticket deleted');
+                              }
+                            }}
+                            className="p-1.5 text-neutral-400 hover:text-red-600 rounded-full hover:bg-neutral-100 transition-colors"
+                            title="Delete Ticket"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Message Thread */}
@@ -3843,8 +3924,32 @@ export const AdminPage: React.FC = () => {
                         ))}
                       </div>
 
+                      {/* Quick Canned Replies */}
+                      <div className="pt-2">
+                        <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider block mb-1.5">
+                          Quick Canned Responses:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { label: 'Exchange Approved', text: 'We have approved your sizing exchange request. A prepaid DHL return waybill has been scheduled for your collection.' },
+                            { label: 'Care Protocol', text: 'For GORE-TEX 3L caps, wash cold on delicate cycle (30°C max) using liquid technical detergent. Line dry away from direct heat sources.' },
+                            { label: 'Dispatched Today', text: 'Your order has passed laboratory inspection and is scheduled for courier handover today. Tracking updates will be visible on your portal.' },
+                            { label: 'Issue Resolved', text: 'Your inquiry has been fully addressed by our operations desk. Please let us know if you require any further assistance.' },
+                          ].map((canned) => (
+                            <button
+                              key={canned.label}
+                              type="button"
+                              onClick={() => setAdminReplyText(canned.text)}
+                              className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-[10px] font-semibold transition-colors cursor-pointer"
+                            >
+                              + {canned.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Reply Box */}
-                      <form onSubmit={handleAdminSendReply} className="pt-4 border-t border-neutral-200 space-y-3">
+                      <form onSubmit={handleAdminSendReply} className="pt-3 border-t border-neutral-200 space-y-3">
                         <textarea
                           rows={3}
                           required

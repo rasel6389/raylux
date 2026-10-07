@@ -15,6 +15,8 @@ interface TicketContextType {
   }) => SupportTicket;
   addReply: (ticketId: string, message: string, sender: 'customer' | 'support' | 'admin' | 'ai', senderName: string) => void;
   updateTicketStatus: (ticketId: string, status: SupportTicket['status']) => void;
+  deleteTicket: (ticketId: string) => void;
+  getTicketById: (ticketIdOrNumber: string) => SupportTicket | undefined;
   getTicketsByEmail: (email: string) => SupportTicket[];
 }
 
@@ -183,6 +185,17 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
 
+  const deleteTicket = (ticketId: string) => {
+    setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+  };
+
+  const getTicketById = (ticketIdOrNumber: string) => {
+    const q = ticketIdOrNumber.trim().toLowerCase();
+    return tickets.find(
+      (t) => t.id.toLowerCase() === q || t.ticketNumber.toLowerCase() === q
+    );
+  };
+
   const getTicketsByEmail = (email: string) => {
     const trimmed = email.trim().toLowerCase();
     return tickets.filter((t) => t.customerEmail.toLowerCase() === trimmed);
@@ -195,6 +208,8 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         createTicket,
         addReply,
         updateTicketStatus,
+        deleteTicket,
+        getTicketById,
         getTicketsByEmail,
       }}
     >

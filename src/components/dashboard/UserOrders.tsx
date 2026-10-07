@@ -8,18 +8,16 @@ import { useNavigation } from '../../context/NavigationContext';
 export const UserOrders: React.FC = () => {
   const { orders } = useStore();
   const { currentUser } = useAuth();
-  const { goToShop } = useNavigation();
+  const { goToShop, goToTracking, goToSupport } = useNavigation();
 
-  // Filter orders for active user or show all orders with relevant match
+  // Filter orders for active user strictly
   const userOrders = useMemo(() => {
-    if (!currentUser) return orders;
-    const matched = orders.filter(
+    if (!currentUser) return [];
+    return orders.filter(
       (o) =>
-        o.userEmail?.toLowerCase() === currentUser.email.toLowerCase() ||
-        o.shippingAddress.fullName.toLowerCase().includes(currentUser.name.toLowerCase().split(' ')[0]) ||
-        (currentUser.email === 'marcus.vance@studio.com' && o.shippingAddress.fullName.includes('Marcus'))
+        (o.userId && o.userId === currentUser.id) ||
+        (o.userEmail && o.userEmail.toLowerCase() === currentUser.email.toLowerCase())
     );
-    return matched.length > 0 ? matched : orders;
   }, [orders, currentUser]);
 
   const [selectedOrder, setSelectedOrder] = useState<Order>(userOrders[0] || orders[0]);
@@ -147,18 +145,35 @@ export const UserOrders: React.FC = () => {
               </div>
 
               {/* Tracking Status Timeline Banner */}
-              <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-xl space-y-2 font-sans text-xs">
-                <div className="flex items-center gap-2 text-black font-bold">
-                  {selectedOrder.status === 'DELIVERED' ? (
-                    <CheckCircle2 size={16} className="text-emerald-600" />
-                  ) : (
-                    <Truck size={16} className="text-black" />
-                  )}
-                  <span className="uppercase">{selectedOrder.status} • {selectedOrder.carrier}</span>
+              <div className="p-5 bg-neutral-50 border border-neutral-200 rounded-2xl space-y-3 font-sans text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-black font-bold">
+                    {selectedOrder.status === 'DELIVERED' ? (
+                      <CheckCircle2 size={16} className="text-emerald-600" />
+                    ) : (
+                      <Truck size={16} className="text-black" />
+                    )}
+                    <span className="uppercase">{selectedOrder.status} • {selectedOrder.carrier}</span>
+                  </div>
+                  <span className="font-mono text-[11px] text-neutral-500">
+                    WAYBILL: {selectedOrder.trackingNumber}
+                  </span>
                 </div>
-                <div className="flex justify-between text-neutral-600 text-[11px] font-mono">
-                  <span>WAYBILL: {selectedOrder.trackingNumber}</span>
-                  <span>{selectedOrder.estimatedDelivery}</span>
+                
+                <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-neutral-200">
+                  <button
+                    onClick={() => goToTracking(selectedOrder.orderNumber)}
+                    className="flex-1 py-2.5 px-4 bg-black text-white hover:bg-neutral-800 rounded-full font-bold uppercase text-[11px] tracking-wider transition-colors inline-flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  >
+                    <Truck size={13} />
+                    <span>Open Live Telemetry</span>
+                  </button>
+                  <button
+                    onClick={() => goToSupport()}
+                    className="py-2.5 px-4 border border-neutral-300 hover:border-black rounded-full font-bold uppercase text-[11px] tracking-wider transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer text-neutral-700 hover:text-black"
+                  >
+                    <span>Support Ticket</span>
+                  </button>
                 </div>
               </div>
 

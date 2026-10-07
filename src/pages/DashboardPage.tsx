@@ -49,56 +49,44 @@ export const DashboardPage: React.FC = () => {
     return products.filter((p) => wishlistIds.includes(p.id));
   }, [products, wishlistIds]);
 
-  // Addresses state
-  const [addresses, setAddresses] = useState<AddressData[]>([
-    {
-      id: 'addr-1',
-      title: 'HOME RESIDENCE',
-      fullName: currentUser?.name || 'Marcus Vance',
-      street: '450 West 33rd Street, Fl 14',
-      city: 'New York',
-      state: 'NY',
-      zip: '10001',
-      country: 'United States',
-      isDefault: true,
-    },
-    {
-      id: 'addr-2',
-      title: 'DESIGN STUDIO',
-      fullName: `${currentUser?.name || 'Marcus Vance'} (Studio)`,
-      street: '120 Broadway, Suite 800',
-      city: 'New York',
-      state: 'NY',
-      zip: '10271',
-      country: 'United States',
-      isDefault: false,
-    },
-  ]);
+  // Addresses state (scoped to user)
+  const [addresses, setAddresses] = useState<AddressData[]>(() => {
+    try {
+      const saved = localStorage.getItem(`raylux_addresses_${currentUser?.id || 'guest'}`);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return currentUser?.address ? [
+      {
+        id: 'addr-default',
+        title: 'PRIMARY SHIPPING DESTINATION',
+        fullName: currentUser.name,
+        street: currentUser.address,
+        city: 'New York',
+        state: 'NY',
+        zip: '10001',
+        country: 'United States',
+        isDefault: true,
+      }
+    ] : [];
+  });
 
-  // Payment methods state
-  const [paymentCards, setPaymentCards] = useState<PaymentCardData[]>([
-    {
-      id: 'card-1',
-      brand: 'Visa',
-      last4: '4242',
-      expiry: '08/28',
-      cardholder: currentUser ? currentUser.name.toUpperCase() : 'MARCUS VANCE',
-      isDefault: true,
-    },
-    {
-      id: 'card-2',
-      brand: 'Mastercard',
-      last4: '8819',
-      expiry: '11/27',
-      cardholder: currentUser ? currentUser.name.toUpperCase() : 'MARCUS VANCE',
-      isDefault: false,
-    },
-  ]);
+  // Payment methods state (scoped to user)
+  const [paymentCards, setPaymentCards] = useState<PaymentCardData[]>(() => {
+    try {
+      const saved = localStorage.getItem(`raylux_cards_${currentUser?.id || 'guest'}`);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return [];
+  });
 
   // Profile preferences state
-  const [profileName, setProfileName] = useState(currentUser?.name || 'Marcus Vance');
-  const [profileEmail, setProfileEmail] = useState(currentUser?.email || 'marcus.vance@studio.com');
-  const [profilePhone, setProfilePhone] = useState(currentUser?.phone || '+1 (555) 234-8921');
+  const [profileName, setProfileName] = useState(currentUser?.name || '');
+  const [profileEmail, setProfileEmail] = useState(currentUser?.email || '');
+  const [profilePhone, setProfilePhone] = useState(currentUser?.phone || '');
   const [sizePreference, setSizePreference] = useState(currentUser?.sizePreference || 'L/XL (58-61CM)');
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(false);
@@ -109,10 +97,64 @@ export const DashboardPage: React.FC = () => {
     if (currentUser) {
       setProfileName(currentUser.name);
       setProfileEmail(currentUser.email);
-      if (currentUser.phone) setProfilePhone(currentUser.phone);
-      if (currentUser.sizePreference) setSizePreference(currentUser.sizePreference);
+      setProfilePhone(currentUser.phone || '');
+      setSizePreference(currentUser.sizePreference || 'L/XL (58-61CM)');
+
+      try {
+        const savedAddrs = localStorage.getItem(`raylux_addresses_${currentUser.id}`);
+        if (savedAddrs) {
+          setAddresses(JSON.parse(savedAddrs));
+        } else if (currentUser.address) {
+          setAddresses([
+            {
+              id: 'addr-default',
+              title: 'PRIMARY SHIPPING DESTINATION',
+              fullName: currentUser.name,
+              street: currentUser.address,
+              city: 'New York',
+              state: 'NY',
+              zip: '10001',
+              country: 'United States',
+              isDefault: true,
+            }
+          ]);
+        } else {
+          setAddresses([]);
+        }
+
+        const savedCards = localStorage.getItem(`raylux_cards_${currentUser.id}`);
+        if (savedCards) {
+          setPaymentCards(JSON.parse(savedCards));
+        } else {
+          setPaymentCards([]);
+        }
+      } catch {
+        // ignore
+      }
     }
   }, [currentUser]);
+
+  // Sync addresses to localStorage
+  useEffect(() => {
+    if (currentUser) {
+      try {
+        localStorage.setItem(`raylux_addresses_${currentUser.id}`, JSON.stringify(addresses));
+      } catch {
+        // ignore
+      }
+    }
+  }, [addresses, currentUser]);
+
+  // Sync cards to localStorage
+  useEffect(() => {
+    if (currentUser) {
+      try {
+        localStorage.setItem(`raylux_cards_${currentUser.id}`, JSON.stringify(paymentCards));
+      } catch {
+        // ignore
+      }
+    }
+  }, [paymentCards, currentUser]);
 
   // Modals state
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -716,6 +758,52 @@ export const DashboardPage: React.FC = () => {
                           }`}
                         >
                           {sz}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Regional Currency & Billing Preference */}
+                  <div className="space-y-4 pt-6 border-t border-neutral-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase text-black">Store Currency Preference</h4>
+                        <p className="text-neutral-500 text-xs">Select your currency for real-time pricing and billing.</p>
+                      </div>
+                      <span className="text-xs font-bold px-2.5 py-1 bg-black text-white rounded-full uppercase">
+                        Current: {currency}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { code: 'USD' as const, symbol: '$', name: 'US Dollar', flag: '🇺🇸', hub: 'Global & North America' },
+                        { code: 'GBP' as const, symbol: '£', name: 'British Pound', flag: '🇬🇧', hub: 'United Kingdom Terminal' },
+                        { code: 'EUR' as const, symbol: '€', name: 'Eurozone Euro', flag: '🇪🇺', hub: 'European Union Direct' },
+                      ].map((item) => (
+                        <button
+                          key={item.code}
+                          type="button"
+                          onClick={() => setCurrency(item.code)}
+                          className={`p-3.5 border rounded-xl text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+                            currency === item.code
+                              ? 'border-black bg-neutral-900 text-white shadow-md'
+                              : 'border-neutral-200 bg-white hover:border-neutral-400 text-black'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xl">{item.flag}</span>
+                            {currency === item.code ? (
+                              <span className="text-[10px] font-bold bg-white text-black px-2 py-0.5 rounded-full">Active</span>
+                            ) : (
+                              <span className="text-xs font-bold text-neutral-400">{item.symbol}</span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{item.code} ({item.symbol})</p>
+                            <p className={`text-[11px] ${currency === item.code ? 'text-neutral-300' : 'text-neutral-500'}`}>{item.name}</p>
+                            <p className={`text-[10px] ${currency === item.code ? 'text-neutral-400' : 'text-neutral-400'}`}>{item.hub}</p>
+                          </div>
                         </button>
                       ))}
                     </div>
